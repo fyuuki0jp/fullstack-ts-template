@@ -2,7 +2,7 @@
   "name": "spa_hono",
   "type": "module",
   "scripts": {
-    "dev": "vite",
+    "dev": "tsx watch src/index.ts",
     "build": "vite build",
     "preview": "vite preview",
     "test": "vitest",
@@ -18,6 +18,8 @@
     "@fyuuki0jp/eslint-plugin-railway": "^0.1.0",
     "@fyuuki0jp/railway-result": "^0.1.0",
     "@hono/node-server": "^1.14.3",
+    "@types/better-sqlite3": "^7.6.13",
+    "better-sqlite3": "^11.10.0",
     "hono": "^4.7.10",
     "velona": "^0.8.0"
   },
@@ -31,7 +33,7 @@
     "eslint-plugin-prettier": "^5.4.1",
     "happy-dom": "^17.5.6",
     "prettier": "^3.5.3",
-    "tsx": "^4.7.1",
+    "tsx": "^4.19.4",
     "typescript": "^5.8.3",
     "vite": "^6.3.5",
     "vitest": "^3.1.4"
