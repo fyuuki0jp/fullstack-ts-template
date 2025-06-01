@@ -33,11 +33,11 @@ Let's create a "Product" feature step by step.
 
 ```bash
 # Create entity file
-touch packages/backend/entities/product.ts
+touch src/entities/product.ts
 ```
 
 ```typescript
-// packages/backend/entities/product.ts
+// src/entities/product.ts
 import type { Entity } from './types';
 
 export interface Product extends Entity {
@@ -51,14 +51,14 @@ export interface Product extends Entity {
 
 ```bash
 # Create feature directories
-mkdir -p packages/backend/features/product/{api,commands,queries,domain}
+mkdir -p src/features/product/{api,commands,queries,domain}
 ```
 
 ### Step 3: Write Tests First (TDD)
 
 ```bash
 # Create test file
-touch packages/backend/features/product/commands/create-product.spec.ts
+touch src/features/product/commands/create-product.spec.ts
 ```
 
 See the existing `user` feature for test examples!
@@ -71,33 +71,19 @@ Follow this order:
 3. **Queries**: Read operations (get, list)
 4. **API Routes**: HTTP endpoints
 
-### Step 5: Add Frontend Route
+### Step 5: Add Route
 
 ```bash
-# Create product listing page
-touch packages/frontend/app/products/index.tsx
-```
-
-```tsx
-// packages/frontend/app/products/index.tsx
-export default function ProductsPage() {
-  // Your component code
-}
+# Add route to your server.ts
 ```
 
 ## 3. Common Tasks
 
 ### Add a New API Endpoint
 
-1. Add route in `packages/backend/features/[feature]/api/routes.ts`
+1. Add route in `src/features/[feature]/api/routes.ts`
 2. Use method chaining pattern
 3. Return consistent response format
-
-### Add a Frontend Page
-
-1. Create file in `packages/frontend/app/[route].tsx`
-2. Route is automatically generated
-3. Use fetch for API calls
 
 ### Run Tests
 
@@ -114,10 +100,10 @@ yarn test user.spec
 
 ### Database Migrations
 
-The database schema is created automatically in `packages/backend/server.ts`. To add a new table:
+The database schema is created automatically in `src/server.ts`. To add a new table:
 
 ```typescript
-// In packages/backend/server.ts
+// In src/server.ts
 db.exec(`
   CREATE TABLE IF NOT EXISTS products (
     id TEXT PRIMARY KEY,

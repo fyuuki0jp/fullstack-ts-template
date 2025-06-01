@@ -36,7 +36,7 @@ async function getUser(id: string): Promise<User> {
 Features are organized vertically with clear boundaries:
 
 ```
-backend/features/user/
+src/features/user/
 ├── api/          # Public API layer
 │   └── routes.ts # HTTP endpoints
 ├── commands/     # Write operations
@@ -213,51 +213,9 @@ Consistent JSON response structure:
 { error: "Error message" }  // All errors
 ```
 
-## Frontend Architecture
+## Client Integration
 
-### File-Based Routing
-
-Routes are automatically generated from file structure:
-
-```
-frontend/app/
-├── index.tsx           → /
-├── users/
-│   ├── index.tsx      → /users
-│   └── [id].tsx       → /users/:id
-└── products/
-    └── index.tsx      → /products
-```
-
-### Component Organization
-
-```
-frontend/
-├── app/               # Route components
-├── components/        # Shared components
-│   ├── ui/           # Generic UI components
-│   └── features/     # Feature-specific components
-└── hooks/            # Custom React hooks
-```
-
-### State Management
-
-Local state with React hooks:
-
-```typescript
-function UserList() {
-  // Local state
-  const [users, setUsers] = useState<User[]>([]);
-  const [loading, setLoading] = useState(true);
-  
-  // Effects for data fetching
-  useEffect(() => {
-    fetchUsers().then(setUsers);
-  }, []);
-  
-  // No global state management needed for simple apps
-}
-```
+The API is designed to be consumed by any client (React, Vue, mobile apps, etc.). The focus is on providing a clean, consistent API that follows REST principles.
 
 ## Testing Architecture
 

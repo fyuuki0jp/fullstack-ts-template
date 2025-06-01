@@ -3,7 +3,8 @@
   "type": "module",
   "private": true,
   "workspaces": [
-    "packages/*"
+    "backend",
+    "frontend"
   ],
   "scripts": {
     "dev": "yarn workspace @spa-hono/frontend dev & yarn workspace @spa-hono/backend dev",

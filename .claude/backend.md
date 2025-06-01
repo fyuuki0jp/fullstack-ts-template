@@ -7,7 +7,7 @@ Complete guide for Hono backend API development with FSD, CQRS, and Railway Resu
 ### Route Structure with Method Chaining
 
 ```typescript
-// backend/features/user/api/routes.ts
+// src/features/user/api/routes.ts
 import { Hono } from 'hono';
 import { isErr } from '@fyuuki0jp/railway-result';
 import type { DbAdapter } from '../../../shared/adapters/db';
@@ -131,7 +131,7 @@ function determineStatusCode(error: Error): number {
 ### Basic Command Structure
 
 ```typescript
-// backend/features/user/commands/create-user.ts
+// src/features/user/commands/create-user.ts
 import { depend } from 'velona';
 import { ok, err } from '@fyuuki0jp/railway-result';
 import type { UserRepository } from '../domain/repository';
@@ -171,7 +171,7 @@ export const createUser = depend(
 ### Complex Command with Transaction
 
 ```typescript
-// backend/features/order/commands/create-order.ts
+// src/features/order/commands/create-order.ts
 export const createOrder = depend(
   { 
     orderRepository: {} as OrderRepository,
@@ -231,7 +231,7 @@ export const createOrder = depend(
 ### Simple Query
 
 ```typescript
-// backend/features/user/queries/get-users.ts
+// src/features/user/queries/get-users.ts
 import { depend } from 'velona';
 import type { UserRepository } from '../domain/repository';
 
@@ -247,7 +247,7 @@ export const getUsers = depend(
 ### Query with Filters
 
 ```typescript
-// backend/features/product/queries/search-products.ts
+// src/features/product/queries/search-products.ts
 export interface SearchFilters {
   query?: string;
   minPrice?: number;
@@ -280,7 +280,7 @@ export const searchProducts = depend(
 ### Repository Interface
 
 ```typescript
-// backend/features/user/domain/repository.ts
+// src/features/user/domain/repository.ts
 import type { Result } from '@fyuuki0jp/railway-result';
 import type { User } from '../../../entities/user';
 
@@ -297,7 +297,7 @@ export interface UserRepository {
 ### Repository Implementation
 
 ```typescript
-// backend/features/user/domain/user-repository-impl.ts
+// src/features/user/domain/user-repository-impl.ts
 import { depend } from 'velona';
 import { ok, err } from '@fyuuki0jp/railway-result';
 import type { DbAdapter } from '../../../shared/adapters/db';
@@ -425,7 +425,7 @@ function transformToUser(row: UserRow): User {
 ### SQLite Adapter Implementation
 
 ```typescript
-// backend/shared/adapters/db/sqlite.ts
+// src/shared/adapters/db/sqlite.ts
 import Database from 'better-sqlite3';
 import { ok, err } from '@fyuuki0jp/railway-result';
 import type { DbAdapter } from './types';
@@ -486,7 +486,7 @@ export function createSqliteAdapter(filename: string): DbAdapter {
 ### Main Server Configuration
 
 ```typescript
-// backend/server.ts
+// src/server.ts
 import { serve } from '@hono/node-server';
 import { Hono } from 'hono';
 import { cors } from 'hono/cors';
@@ -556,7 +556,7 @@ serve(
 ### Authentication Middleware
 
 ```typescript
-// backend/middleware/auth.ts
+// src/middleware/auth.ts
 import { createMiddleware } from 'hono/factory';
 import { verify } from 'jsonwebtoken';
 
@@ -586,7 +586,7 @@ export const auth = createMiddleware(async (c, next) => {
 ### Validation Middleware
 
 ```typescript
-// backend/middleware/validate.ts
+// src/middleware/validate.ts
 import { z } from 'zod';
 
 export function validate<T>(schema: z.Schema<T>) {
@@ -626,7 +626,7 @@ const createUserSchema = z.object({
 ### Pagination
 
 ```typescript
-// backend/features/user/api/routes.ts
+// src/features/user/api/routes.ts
 .get('/', async (c) => {
   const page = parseInt(c.req.query('page') || '1');
   const limit = parseInt(c.req.query('limit') || '20');
@@ -653,7 +653,7 @@ const createUserSchema = z.object({
 ### File Upload
 
 ```typescript
-// backend/features/upload/api/routes.ts
+// src/features/upload/api/routes.ts
 .post('/upload', async (c) => {
   const body = await c.req.parseBody();
   const file = body.file as File;
@@ -686,7 +686,7 @@ const createUserSchema = z.object({
 ### Background Jobs
 
 ```typescript
-// backend/features/email/commands/send-welcome-email.ts
+// src/features/email/commands/send-welcome-email.ts
 export const sendWelcomeEmail = depend(
   { 
     emailService: {} as EmailService,
