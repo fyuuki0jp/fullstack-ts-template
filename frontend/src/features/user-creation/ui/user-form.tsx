@@ -79,6 +79,7 @@ export const UserForm: FC<UserFormProps> = ({ onSuccess }) => {
       className="space-y-4"
       noValidate
       aria-label="Create new user"
+      data-oid="t30h3vo"
     >
       <Input
         label="Email Address"
@@ -91,6 +92,7 @@ export const UserForm: FC<UserFormProps> = ({ onSuccess }) => {
         error={emailError}
         autoComplete="email"
         aria-describedby={emailError ? 'email-error' : undefined}
+        data-oid="x-yvsl."
       />
 
       <Input
@@ -104,6 +106,7 @@ export const UserForm: FC<UserFormProps> = ({ onSuccess }) => {
         error={nameError}
         autoComplete="name"
         aria-describedby={nameError ? 'name-error' : undefined}
+        data-oid=":zcyx:m"
       />
 
       {error && (
@@ -111,8 +114,9 @@ export const UserForm: FC<UserFormProps> = ({ onSuccess }) => {
           className="text-red-600 text-sm p-3 bg-red-50 border border-red-200 rounded-md"
           role="alert"
           aria-live="polite"
+          data-oid="8vrw7mw"
         >
-          <strong>Error:</strong> {error.message}
+          <strong data-oid="lyydst9">Error:</strong> {error.message}
         </div>
       )}
 
@@ -120,12 +124,18 @@ export const UserForm: FC<UserFormProps> = ({ onSuccess }) => {
         type="submit"
         isDisabled={isPending || !isFormValid}
         aria-describedby={isPending ? 'submit-status' : undefined}
+        data-oid="l23k9m8"
       >
         {isPending ? 'Creating...' : 'Create User'}
       </Button>
 
       {isPending && (
-        <div id="submit-status" className="sr-only" aria-live="polite">
+        <div
+          id="submit-status"
+          className="sr-only"
+          aria-live="polite"
+          data-oid="9iw3glm"
+        >
           Creating user, please wait...
         </div>
       )}

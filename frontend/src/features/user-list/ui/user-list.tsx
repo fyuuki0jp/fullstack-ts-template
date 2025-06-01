@@ -18,6 +18,7 @@ export const UserList: FC = () => {
             className="animate-spin rounded-full h-6 w-6 border-b-2 border-blue-600"
             aria-hidden="true"
           />
+
           <span className="text-gray-500">Loading users...</span>
         </div>
       </div>

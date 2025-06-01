@@ -24,7 +24,7 @@ describe('UserForm', () => {
   });
 
   it('renders form fields correctly', () => {
-    render(<UserForm />, { wrapper: createTestWrapper() });
+    render(<UserForm data-oid="3m3fzqj" />, { wrapper: createTestWrapper() });
 
     const textboxes = screen.getAllByRole('textbox');
     expect(textboxes).toHaveLength(2);
@@ -36,7 +36,7 @@ describe('UserForm', () => {
   });
 
   it('handles input changes', () => {
-    render(<UserForm />, { wrapper: createTestWrapper() });
+    render(<UserForm data-oid="mu0lf5s" />, { wrapper: createTestWrapper() });
 
     const [emailInput, nameInput] = screen.getAllByRole('textbox');
 
@@ -48,7 +48,7 @@ describe('UserForm', () => {
   });
 
   it('submits form with correct data', () => {
-    render(<UserForm />, { wrapper: createTestWrapper() });
+    render(<UserForm data-oid="3j-._3j" />, { wrapper: createTestWrapper() });
 
     const [emailInput, nameInput] = screen.getAllByRole('textbox');
     const submitButton = screen.getByRole('button', { name: 'Create User' });
@@ -66,7 +66,7 @@ describe('UserForm', () => {
   });
 
   it('prevents submission with empty fields', () => {
-    render(<UserForm />, { wrapper: createTestWrapper() });
+    render(<UserForm data-oid=".jk64z:" />, { wrapper: createTestWrapper() });
 
     const submitButton = screen.getByRole('button', { name: 'Create User' });
     fireEvent.click(submitButton);
@@ -75,7 +75,7 @@ describe('UserForm', () => {
   });
 
   it('prevents submission with only email filled', () => {
-    render(<UserForm />, { wrapper: createTestWrapper() });
+    render(<UserForm data-oid="lm91v0t" />, { wrapper: createTestWrapper() });
 
     const [emailInput] = screen.getAllByRole('textbox');
     const submitButton = screen.getByRole('button', { name: 'Create User' });
@@ -87,7 +87,7 @@ describe('UserForm', () => {
   });
 
   it('prevents submission with only name filled', () => {
-    render(<UserForm />, { wrapper: createTestWrapper() });
+    render(<UserForm data-oid="22u496u" />, { wrapper: createTestWrapper() });
 
     const [, nameInput] = screen.getAllByRole('textbox');
     const submitButton = screen.getByRole('button', { name: 'Create User' });
@@ -105,7 +105,7 @@ describe('UserForm', () => {
       error: null,
     } as any);
 
-    render(<UserForm />, { wrapper: createTestWrapper() });
+    render(<UserForm data-oid="qr2zu20" />, { wrapper: createTestWrapper() });
 
     expect(
       screen.getByRole('button', { name: 'Creating...' })
@@ -117,14 +117,14 @@ describe('UserForm', () => {
   });
 
   it('disables submit button when fields are empty', () => {
-    render(<UserForm />, { wrapper: createTestWrapper() });
+    render(<UserForm data-oid="3ra94-t" />, { wrapper: createTestWrapper() });
 
     const submitButton = screen.getByRole('button', { name: 'Create User' });
     expect(submitButton).toBeDisabled();
   });
 
   it('enables submit button when both fields are filled', () => {
-    render(<UserForm />, { wrapper: createTestWrapper() });
+    render(<UserForm data-oid="-d07lxe" />, { wrapper: createTestWrapper() });
 
     const [emailInput, nameInput] = screen.getAllByRole('textbox');
     const submitButton = screen.getByRole('button', { name: 'Create User' });
@@ -143,7 +143,7 @@ describe('UserForm', () => {
       error: new Error(errorMessage),
     } as any);
 
-    render(<UserForm />, { wrapper: createTestWrapper() });
+    render(<UserForm data-oid="bfay-oz" />, { wrapper: createTestWrapper() });
 
     expect(screen.getByText(errorMessage)).toBeInTheDocument();
   });
@@ -156,7 +156,7 @@ describe('UserForm', () => {
       capturedOnSuccess = options.onSuccess;
     });
 
-    render(<UserForm onSuccess={onSuccess} />, {
+    render(<UserForm onSuccess={onSuccess} data-oid="uhegqfd" />, {
       wrapper: createTestWrapper(),
     });
 
@@ -180,7 +180,7 @@ describe('UserForm', () => {
   });
 
   it('has correct form attributes', () => {
-    const { container } = render(<UserForm />, {
+    const { container } = render(<UserForm data-oid="t8xj:rs" />, {
       wrapper: createTestWrapper(),
     });
 

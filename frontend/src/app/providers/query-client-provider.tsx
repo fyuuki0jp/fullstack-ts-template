@@ -18,6 +18,8 @@ export const AppQueryClientProvider: FC<AppQueryClientProviderProps> = ({
   children,
 }) => {
   return (
-    <QueryClientProvider client={queryClient}>{children}</QueryClientProvider>
+    <QueryClientProvider client={queryClient} data-oid="l9x9aj_">
+      {children}
+    </QueryClientProvider>
   );
 };
