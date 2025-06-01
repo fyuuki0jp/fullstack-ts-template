@@ -7,9 +7,36 @@ import prettierPlugin from 'eslint-plugin-prettier';
 
 export default [
   js.configs.recommended,
+  railway.configs.recommended,
   prettier,
   {
     ignores: ['**/dist/**', '**/node_modules/**', '**/.turbo/**', '**/coverage/**'],
+  },
+  {
+    files: ['backend/**/*.ts', 'backend/**/*.tsx'],
+    languageOptions: {
+      globals: {
+        console: 'readonly',
+        process: 'readonly',
+        Buffer: 'readonly',
+        __dirname: 'readonly',
+        __filename: 'readonly',
+      },
+    },
+  },
+  {
+    files: ['frontend/**/*.ts', 'frontend/**/*.tsx'],
+    languageOptions: {
+      globals: {
+        console: 'readonly',
+        document: 'readonly',
+        window: 'readonly',
+        HTMLButtonElement: 'readonly',
+        HTMLInputElement: 'readonly',
+        FormEvent: 'readonly',
+        Event: 'readonly',
+      },
+    },
   },
   {
     files: ['**/*.ts', '**/*.tsx'],
@@ -23,12 +50,10 @@ export default [
     plugins: {
       '@typescript-eslint': typescript,
       prettier: prettierPlugin,
-      railway,
     },
     rules: {
       ...typescript.configs.recommended.rules,
       'prettier/prettier': 'error',
-      'railway/use-result': 'error',
       '@typescript-eslint/no-unused-vars': [
         'error',
         { argsIgnorePattern: '^_', varsIgnorePattern: '^_' },
@@ -40,7 +65,7 @@ export default [
   {
     files: ['**/*.spec.ts', '**/*.spec.tsx'],
     rules: {
-      'railway/use-result': 'off',
+      'eslint-plugin-railway/require-result-return-type': 'off',
     },
   },
 ];
