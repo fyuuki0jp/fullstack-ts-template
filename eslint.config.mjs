@@ -39,6 +39,12 @@ export default [
     },
   },
   {
+    files: ['**/*.tsx'],
+    rules: {
+      '@fyuuki0jp/railway/require-result-return-type': 'off',
+    },
+  },
+  {
     ignores: ['node_modules/', 'dist/', 'coverage/'],
   },
 ];

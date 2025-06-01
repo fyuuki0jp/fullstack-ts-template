@@ -7,3 +7,7 @@ export interface DbAdapter {
     fn: (tx: DbAdapter) => Promise<Result<T, Error>>
   ): Promise<Result<T, Error>>;
 }
+
+export { MemoryAdapter } from './memory';
+export { SqliteAdapter } from './sqlite';
+export { MockDbAdapter } from './mock';

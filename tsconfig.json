@@ -2,18 +2,23 @@
   "compilerOptions": {
     "target": "ESNext",
     "module": "ESNext",
+    "lib":["DOM", "DOM.Iterable", "ESNext"],
     "moduleResolution": "bundler",
     "strict": true,
     "verbatimModuleSyntax": true,
     "skipLibCheck": true,
     "types": ["node", "vitest/globals"],
     "jsx": "react-jsx",
-    "jsxImportSource": "hono/jsx",
+    "jsxImportSource": "react",
     "outDir": "./dist",
     "esModuleInterop": true,
     "forceConsistentCasingInFileNames": true,
-    "resolveJsonModule": true
+    "resolveJsonModule": true,
+    "baseUrl": ".",
+    "paths": {
+      "@/*": ["backend/*", "frontend/*"],
+    },
   },
-  "include": ["src", "vite.config.ts", "vitest.config.ts"],
+  "include": ["frontend","backend", "vite.config.ts", "vitest.config.ts", "vite-env.d.ts"],
   "exclude": ["node_modules", "dist"]
 }

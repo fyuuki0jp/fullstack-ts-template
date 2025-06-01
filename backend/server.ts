@@ -1,7 +1,7 @@
 import { serve } from '@hono/node-server';
 import { Hono } from 'hono';
-import { SqliteAdapter } from './shared/adapters/db/sqlite';
-import createUserRoutes from './features/user/api/routes';
+import { SqliteAdapter } from '@/shared/adapters/db';
+import createUserRoutes from '@/features/user/api/routes';
 
 // Initialize database
 const db = new SqliteAdapter();
@@ -20,17 +20,17 @@ await db.execute(`
 // Create app
 const app = new Hono();
 
-// Health check
-app.get('/', (c) => c.text('Hello Hono!'));
-
 // Mount user routes
-app.route('/users', createUserRoutes(db));
+const route = app.basePath('/api').route('/users', createUserRoutes(db));
 
-// Start server
-const port = 3001;
-console.log(`Server is running on http://localhost:${port}`);
+export type ApiSchema = typeof route;
 
-serve({
-  fetch: app.fetch,
-  port,
-});
+serve(
+  {
+    port: 3000,
+    fetch: route.fetch,
+  },
+  (info) => {
+    console.log(`Server is running at http://localhost:${info.port}`);
+  }
+);
