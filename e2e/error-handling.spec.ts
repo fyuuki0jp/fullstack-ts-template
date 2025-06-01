@@ -12,8 +12,8 @@ test.describe('Error Handling', () => {
     });
 
     // Try to create a user
-    await page.getByLabelText('Email Address').fill('network@example.com');
-    await page.getByLabelText('Full Name').fill('Network User');
+    await page.getByPlaceholder('user@example.com').fill('network@example.com');
+    await page.getByPlaceholder('John Doe').fill('Network User');
     await page.getByRole('button', { name: 'Create User' }).click();
 
     // Should show error message
@@ -35,8 +35,8 @@ test.describe('Error Handling', () => {
     });
 
     // Try to create a user
-    await page.getByLabelText('Email Address').fill('server@example.com');
-    await page.getByLabelText('Full Name').fill('Server User');
+    await page.getByPlaceholder('user@example.com').fill('server@example.com');
+    await page.getByPlaceholder('John Doe').fill('Server User');
     await page.getByRole('button', { name: 'Create User' }).click();
 
     // Should show error message
@@ -84,8 +84,8 @@ test.describe('Error Handling', () => {
     });
 
     // Try to create a user (this will fail)
-    await page.getByLabelText('Email Address').fill('retry@example.com');
-    await page.getByLabelText('Full Name').fill('Retry User');
+    await page.getByPlaceholder('user@example.com').fill('retry@example.com');
+    await page.getByPlaceholder('John Doe').fill('Retry User');
     await page.getByRole('button', { name: 'Create User' }).click();
 
     // Should show error first
@@ -117,15 +117,15 @@ test.describe('Error Handling', () => {
     const name = 'Maintain User';
 
     // Fill form and submit
-    await page.getByLabelText('Email Address').fill(email);
-    await page.getByLabelText('Full Name').fill(name);
+    await page.getByPlaceholder('user@example.com').fill(email);
+    await page.getByPlaceholder('John Doe').fill(name);
     await page.getByRole('button', { name: 'Create User' }).click();
 
     // Should show error
     await expect(page.getByText(/Error.*Validation failed/)).toBeVisible();
 
     // Form data should be maintained
-    await expect(page.getByLabelText('Email Address')).toHaveValue(email);
-    await expect(page.getByLabelText('Full Name')).toHaveValue(name);
+    await expect(page.getByPlaceholder('user@example.com')).toHaveValue(email);
+    await expect(page.getByPlaceholder('John Doe')).toHaveValue(name);
   });
 });

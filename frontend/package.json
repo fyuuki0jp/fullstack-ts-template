@@ -5,6 +5,7 @@
   "private": true,
   "scripts": {
     "dev": "vite --host",
+    "dev:test": "vite --host",
     "build": "vite build",
     "preview": "vite preview",
     "test": "vitest run",

@@ -1,3 +1,4 @@
+/* eslint-disable no-undef */
 import { render, screen } from '@testing-library/react';
 import { describe, it, expect } from 'vitest';
 import { Card } from './card';
@@ -34,7 +35,7 @@ describe('Card', () => {
   });
 
   it('handles empty children', () => {
-    render(<Card></Card>);
+    render(<Card>{null}</Card>);
     const card = document.querySelector('.bg-white');
 
     expect(card).toBeInTheDocument();

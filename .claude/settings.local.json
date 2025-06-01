@@ -1,0 +1,44 @@
+{
+  "permissions": {
+    "allow": [
+      "Bash(ls:*)",
+      "mcp__context7__resolve-library-id",
+      "mcp__context7__get-library-docs",
+      "Bash(yarn add:*)",
+      "mcp__ide__getDiagnostics",
+      "Bash(yarn lint)",
+      "Bash(yarn list)",
+      "WebFetch(domain:github.com)",
+      "Bash(git init:*)",
+      "Bash(git add:*)",
+      "Bash(git config:*)",
+      "Bash(git remote add:*)",
+      "Bash(git branch:*)",
+      "Bash(git push:*)",
+      "Bash(mkdir:*)",
+      "Bash(tree:*)",
+      "Bash(find:*)",
+      "Bash(yarn format)",
+      "Bash(yarn typecheck)",
+      "Bash(yarn dev)",
+      "Bash(curl:*)",
+      "Bash(yarn test)",
+      "Bash(yarn test:*)",
+      "Bash(git restore:*)",
+      "Bash(yarn lint:*)",
+      "Bash(rm:*)",
+      "Bash(yarn install:*)",
+      "Bash(git commit:*)",
+      "Bash(mv:*)",
+      "Bash(grep:*)",
+      "Bash(sed:*)",
+      "Bash(yarn build)"
+    ],
+    "deny": []
+  },
+  "enableAllProjectMcpServers": true,
+  "enabledMcpjsonServers": [
+    "context7",
+    "playwright"
+  ]
+}

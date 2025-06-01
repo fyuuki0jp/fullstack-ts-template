@@ -30,6 +30,7 @@ export default [
       globals: {
         console: 'readonly',
         document: 'readonly',
+        process: 'readonly',
         window: 'readonly',
         HTMLButtonElement: 'readonly',
         HTMLInputElement: 'readonly',

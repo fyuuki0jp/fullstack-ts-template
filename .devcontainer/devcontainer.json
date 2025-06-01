@@ -17,8 +17,24 @@
   "postCreateCommand": "sudo apt-get install ripgrep",
   "customizations": {
     "vscode": {
-      "extensions": ["Anthropic.claude-code"]
+      "extensions": [
+        "Anthropic.claude-code",
+        "dbaeumer.vscode-eslint",
+        "ms-playwright.playwright",
+        "vitest.explorer",
+        "esbenp.prettier-vscode"
+      ]
     }
+  },
+  "mounts": [
+    {
+      "type": "bind",
+      "source": "/tmp/.X11-unix",
+      "target": "/tmp/.X11-unix"
+    }
+  ],
+  "containerEnv": {
+    "DISPLAY": "host.docker.internal:0.0"
   },
 
   "remoteEnv": {

@@ -8,6 +8,7 @@
   ],
   "scripts": {
     "dev": "yarn workspace @spa-hono/frontend dev & yarn workspace @spa-hono/backend dev",
+    "dev:test": "yarn workspace @spa-hono/frontend dev:test & yarn workspace @spa-hono/backend dev:test",
     "build": "yarn workspaces run build",
     "test": "yarn workspaces run test",
     "test:e2e": "playwright test",
