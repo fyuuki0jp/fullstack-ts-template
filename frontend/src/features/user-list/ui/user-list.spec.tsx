@@ -1,3 +1,4 @@
+/* eslint-disable @typescript-eslint/no-explicit-any */
 import { render, screen } from '@testing-library/react';
 import { describe, it, expect, vi, beforeEach } from 'vitest';
 import { UserList } from './user-list';
@@ -37,9 +38,8 @@ describe('UserList', () => {
 
     render(<UserList />, { wrapper: createTestWrapper() });
 
-    expect(
-      screen.getByText(`Error loading users: ${errorMessage}`)
-    ).toBeInTheDocument();
+    expect(screen.getByText('Error loading users')).toBeInTheDocument();
+    expect(screen.getByText(errorMessage)).toBeInTheDocument();
   });
 
   it('displays empty state when no users', () => {

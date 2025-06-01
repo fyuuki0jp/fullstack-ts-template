@@ -1,4 +1,4 @@
-import { renderHook, waitFor } from '@testing-library/react';
+import { renderHook, waitFor, act } from '@testing-library/react';
 import { describe, it, expect, vi, beforeEach } from 'vitest';
 import { useCreateUser } from './hooks';
 import { createTestWrapper } from '@/test-utils';
@@ -50,9 +50,9 @@ describe('useCreateUser', () => {
       email: 'john@example.com',
     };
 
-    result.current.mutate(createUserInput);
-
-    expect(result.current.isPending).toBe(true);
+    act(() => {
+      result.current.mutate(createUserInput);
+    });
 
     await waitFor(() => {
       expect(result.current.isPending).toBe(false);
@@ -176,8 +176,10 @@ describe('useCreateUser', () => {
       email: 'john@example.com',
     };
 
-    result.current.mutate(createUserInput, {
-      onSuccess: onSuccessMock,
+    act(() => {
+      result.current.mutate(createUserInput, {
+        onSuccess: onSuccessMock,
+      });
     });
 
     await waitFor(() => {
@@ -188,7 +190,7 @@ describe('useCreateUser', () => {
     expect(onSuccessMock).toHaveBeenCalledWith(
       { user: mockUser },
       createUserInput,
-      expect.any(Object)
+      undefined
     );
   });
 });

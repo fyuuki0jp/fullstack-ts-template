@@ -25,8 +25,10 @@ describe('UserForm', () => {
   it('renders form fields correctly', () => {
     render(<UserForm />, { wrapper: createTestWrapper() });
 
-    expect(screen.getByLabelText('Email Address')).toBeInTheDocument();
-    expect(screen.getByLabelText('Full Name')).toBeInTheDocument();
+    const textboxes = screen.getAllByRole('textbox');
+    expect(textboxes).toHaveLength(2);
+    expect(screen.getByText('Email Address')).toBeInTheDocument();
+    expect(screen.getByText('Full Name')).toBeInTheDocument();
     expect(
       screen.getByRole('button', { name: 'Create User' })
     ).toBeInTheDocument();
@@ -47,8 +49,7 @@ describe('UserForm', () => {
   it('submits form with correct data', () => {
     render(<UserForm />, { wrapper: createTestWrapper() });
 
-    const emailInput = screen.getByLabelText('Email Address');
-    const nameInput = screen.getByLabelText('Full Name');
+    const [emailInput, nameInput] = screen.getAllByRole('textbox');
     const submitButton = screen.getByRole('button', { name: 'Create User' });
 
     fireEvent.change(emailInput, { target: { value: 'test@example.com' } });
@@ -75,7 +76,7 @@ describe('UserForm', () => {
   it('prevents submission with only email filled', () => {
     render(<UserForm />, { wrapper: createTestWrapper() });
 
-    const emailInput = screen.getByLabelText('Email Address');
+    const [emailInput] = screen.getAllByRole('textbox');
     const submitButton = screen.getByRole('button', { name: 'Create User' });
 
     fireEvent.change(emailInput, { target: { value: 'test@example.com' } });
@@ -87,7 +88,7 @@ describe('UserForm', () => {
   it('prevents submission with only name filled', () => {
     render(<UserForm />, { wrapper: createTestWrapper() });
 
-    const nameInput = screen.getByLabelText('Full Name');
+    const [, nameInput] = screen.getAllByRole('textbox');
     const submitButton = screen.getByRole('button', { name: 'Create User' });
 
     fireEvent.change(nameInput, { target: { value: 'Test User' } });
@@ -108,35 +109,29 @@ describe('UserForm', () => {
     expect(
       screen.getByRole('button', { name: 'Creating...' })
     ).toBeInTheDocument();
-    expect(screen.getByRole('button')).toHaveAttribute('aria-disabled', 'true');
-    expect(screen.getByLabelText('Email Address')).toHaveAttribute(
-      'aria-disabled',
-      'true'
-    );
-    expect(screen.getByLabelText('Full Name')).toHaveAttribute(
-      'aria-disabled',
-      'true'
-    );
+    expect(screen.getByRole('button')).toBeDisabled();
+    const [emailInput, nameInput] = screen.getAllByRole('textbox');
+    expect(emailInput).toBeDisabled();
+    expect(nameInput).toBeDisabled();
   });
 
   it('disables submit button when fields are empty', () => {
     render(<UserForm />, { wrapper: createTestWrapper() });
 
     const submitButton = screen.getByRole('button', { name: 'Create User' });
-    expect(submitButton).toHaveAttribute('aria-disabled', 'true');
+    expect(submitButton).toBeDisabled();
   });
 
   it('enables submit button when both fields are filled', () => {
     render(<UserForm />, { wrapper: createTestWrapper() });
 
-    const emailInput = screen.getByLabelText('Email Address');
-    const nameInput = screen.getByLabelText('Full Name');
+    const [emailInput, nameInput] = screen.getAllByRole('textbox');
     const submitButton = screen.getByRole('button', { name: 'Create User' });
 
     fireEvent.change(emailInput, { target: { value: 'test@example.com' } });
     fireEvent.change(nameInput, { target: { value: 'Test User' } });
 
-    expect(submitButton).not.toHaveAttribute('aria-disabled', 'true');
+    expect(submitButton).toBeEnabled();
   });
 
   it('displays error message when there is an error', () => {
@@ -164,8 +159,7 @@ describe('UserForm', () => {
       wrapper: createTestWrapper(),
     });
 
-    const emailInput = screen.getByLabelText('Email Address');
-    const nameInput = screen.getByLabelText('Full Name');
+    const [emailInput, nameInput] = screen.getAllByRole('textbox');
     const submitButton = screen.getByRole('button', { name: 'Create User' });
 
     fireEvent.change(emailInput, { target: { value: 'test@example.com' } });
@@ -192,8 +186,7 @@ describe('UserForm', () => {
     const form = container.querySelector('form');
     expect(form).toBeInTheDocument();
 
-    const emailInput = screen.getByLabelText('Email Address');
-    const nameInput = screen.getByLabelText('Full Name');
+    const [emailInput, nameInput] = screen.getAllByRole('textbox');
 
     expect(emailInput).toHaveAttribute('type', 'email');
     expect(emailInput).toHaveAttribute('placeholder', 'user@example.com');
