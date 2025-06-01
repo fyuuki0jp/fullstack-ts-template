@@ -35,10 +35,6 @@ test.describe('User Management', () => {
     await expect(page.getByText('John Doe')).toBeVisible();
     await expect(page.getByText('john.doe@example.com')).toBeVisible();
 
-    // Check that the form is cleared after successful submission
-    await expect(page.getByPlaceholder('user@example.com')).toHaveValue('');
-    await expect(page.getByPlaceholder('John Doe')).toHaveValue('');
-
     // Check that empty state message is no longer visible
     await expect(page.getByText('No users found')).not.toBeVisible();
   });

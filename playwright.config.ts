@@ -15,7 +15,7 @@ export default defineConfig({
   /* Opt out of parallel tests on CI. */
   workers: process.env.CI ? 1 : undefined,
   /* Reporter to use. See https://playwright.dev/docs/test-reporters */
-  reporter: 'dot',
+  reporter: 'github',
   /* Shared settings for all the projects below. See https://playwright.dev/docs/api/class-testoptions. */
   use: {
     /* Base URL to use in actions like `await page.goto('/')`. */
@@ -68,7 +68,7 @@ export default defineConfig({
     {
       command: 'yarn dev:test',
       port: 5173,
-      reuseExistingServer: !process.env.CI,
+      reuseExistingServer: false,
       env: {
         NODE_ENV: 'test',
         DATABASE_MODE: 'memory',
