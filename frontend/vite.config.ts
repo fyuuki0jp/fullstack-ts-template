@@ -2,7 +2,6 @@ import { defineConfig } from 'vite';
 import react from '@vitejs/plugin-react';
 import generouted from '@generouted/react-router/plugin';
 import tailwindcss from '@tailwindcss/vite';
-import { resolve } from 'path';
 import { fileURLToPath, URL } from 'node:url';
 
 export default defineConfig({

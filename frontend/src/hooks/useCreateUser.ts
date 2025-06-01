@@ -1,6 +1,10 @@
 import { useMutation, useQueryClient } from '@tanstack/react-query';
 import { apiClient } from '@/lib/api-client';
-import type { CreateUserInput } from '@/types/user';
+
+interface CreateUserInput {
+  email: string;
+  name: string;
+}
 
 export const useCreateUser = () => {
   const queryClient = useQueryClient();
@@ -12,11 +16,18 @@ export const useCreateUser = () => {
       });
 
       if (!response.ok) {
-        const error = await response.json();
-        throw new Error(error.error || 'Failed to create user');
+        const errorData = await response.json();
+        if ('error' in errorData) {
+          throw new Error(errorData.error);
+        }
+        throw new Error('Failed to create user');
       }
 
-      return response.json();
+      const data = await response.json();
+      if ('user' in data) {
+        return data;
+      }
+      throw new Error('Invalid response format');
     },
     onSuccess: () => {
       // Invalidate and refetch users list

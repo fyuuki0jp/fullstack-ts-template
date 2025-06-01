@@ -4,7 +4,7 @@ import { SqliteAdapter } from './shared/adapters/db';
 import createUserRoutes from './features/user/api/routes';
 
 // Initialize database
-const db = new SqliteAdapter();
+const db = new SqliteAdapter('test.db');
 
 // Create users table
 await db.execute(`

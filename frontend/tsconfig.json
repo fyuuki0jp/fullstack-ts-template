@@ -9,6 +9,6 @@
       "@/*": ["./src/*"]
     }
   },
-  "include": ["src/**/*.ts", "src/**/*.tsx", "vite-env.d.ts", "../backend/src/server.ts"],
+  "include": ["src/**/*.ts", "src/**/*.tsx", "vite-env.d.ts", "../backend/src/**/*.ts"],
   "exclude": ["node_modules", "dist"]
 }
