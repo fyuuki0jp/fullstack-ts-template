@@ -19,7 +19,9 @@ describe('Input', () => {
   });
 
   it('displays error message', () => {
-    const { container } = render(<Input label="Test" error="This field is required" />);
+    const { container } = render(
+      <Input label="Test" error="This field is required" />
+    );
 
     expect(screen.getByText('This field is required')).toBeInTheDocument();
     expect(container.querySelector('input')).toHaveClass('border-red-300');
@@ -35,7 +37,9 @@ describe('Input', () => {
 
   it('handles input changes', () => {
     const handleChange = vi.fn();
-    const { container } = render(<Input label="Test" onChange={handleChange} />);
+    const { container } = render(
+      <Input label="Test" onChange={handleChange} />
+    );
 
     const input = container.querySelector('input') as HTMLInputElement;
     fireEvent.change(input, { target: { value: 'test value' } });
@@ -70,7 +74,9 @@ describe('Input', () => {
   });
 
   it('applies custom className', () => {
-    const { container } = render(<Input label="Test" className="custom-input" />);
+    const { container } = render(
+      <Input label="Test" className="custom-input" />
+    );
 
     expect(container.querySelector('input')).toHaveClass('custom-input');
   });
