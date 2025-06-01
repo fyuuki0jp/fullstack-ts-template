@@ -36,13 +36,15 @@
       "type":"bind",
       "source": "${localEnv:HOME}/.claude",
       "target": "/home/node/.claude"
+    },
+    {
+      "type": "bind",
+      "source": "${localEnv:HOME}/.claude.json",
+      "target": "/home/node/.claude.json"
     }
   ],
   "containerEnv": {
-    "DISPLAY": "host.docker.internal:0.0"
-  },
-
-  "remoteEnv": {
+    "DISPLAY": "host.docker.internal:0",
     "NPM_TOKEN": "${localEnv:NPM_TOKEN}"
   }
 
