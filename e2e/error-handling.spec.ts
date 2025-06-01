@@ -17,7 +17,7 @@ test.describe('Error Handling', () => {
     await page.getByRole('button', { name: 'Create User' }).click();
 
     // Should show error message
-    await expect(page.getByText(/Error.*/)).toBeVisible();
+    await expect(page.getByText(/Error.*/).first()).toBeVisible();
   });
 
   test('should handle server errors gracefully', async ({ page }) => {
