@@ -3,8 +3,15 @@ import { Hono } from 'hono';
 import { SqliteAdapter } from './shared/adapters/db';
 import createUserRoutes from './features/user/api/routes';
 
-// Initialize database
-const db = new SqliteAdapter('test.db');
+// Initialize database - use in-memory for testing, file-based for production
+const isTestMode =
+  process.env.NODE_ENV === 'test' || process.env.DATABASE_MODE === 'memory';
+const dbPath = isTestMode ? ':memory:' : './data.db';
+const db = new SqliteAdapter(dbPath);
+
+console.log(
+  `Database initialized: ${isTestMode ? 'in-memory (test mode)' : 'file-based (production mode)'}`
+);
 
 // Create users table
 await db.execute(`
@@ -25,9 +32,11 @@ const route = app.basePath('/api').route('/users', createUserRoutes(db));
 
 export type ApiSchema = typeof route;
 
+const port = process.env.PORT ? parseInt(process.env.PORT) : 3000;
+
 serve(
   {
-    port: 3000,
+    port,
     fetch: route.fetch,
   },
   (info) => {

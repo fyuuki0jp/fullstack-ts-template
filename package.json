@@ -10,17 +10,22 @@
     "dev": "yarn workspace @spa-hono/frontend dev & yarn workspace @spa-hono/backend dev",
     "build": "yarn workspaces run build",
     "test": "yarn workspaces run test",
+    "test:e2e": "playwright test",
+    "test:e2e:ui": "playwright test --ui",
+    "test:install": "playwright install",
     "lint": "yarn workspaces run lint",
     "typecheck": "yarn workspaces run typecheck",
     "format": "prettier --write .",
     "format:check": "prettier --check ."
   },
   "devDependencies": {
+    "@playwright/test": "^1.52.0",
     "@typescript-eslint/eslint-plugin": "^8.33.0",
     "@typescript-eslint/parser": "^8.33.0",
     "eslint": "^9.28.0",
     "eslint-config-prettier": "^10.1.5",
     "eslint-plugin-prettier": "^5.4.1",
+    "playwright": "^1.52.0",
     "prettier": "^3.5.3",
     "typescript": "^5.8.3"
   },
