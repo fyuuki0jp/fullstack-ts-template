@@ -32,7 +32,9 @@
       "Bash(mv:*)",
       "Bash(grep:*)",
       "Bash(sed:*)",
-      "Bash(yarn build)"
+      "Bash(yarn build)",
+      "Bash(yarn workspace @spa-hono/frontend test:*)",
+      "Bash(npx vitest run:*)"
     ],
     "deny": []
   },

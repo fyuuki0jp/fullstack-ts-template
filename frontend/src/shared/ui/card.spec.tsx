@@ -35,8 +35,8 @@ describe('Card', () => {
   });
 
   it('handles empty children', () => {
-    render(<Card>{null}</Card>);
-    const card = document.querySelector('.bg-white');
+    const { container } = render(<Card>{null}</Card>);
+    const card = container.firstChild as HTMLElement;
 
     expect(card).toBeInTheDocument();
     expect(card).toBeEmptyDOMElement();

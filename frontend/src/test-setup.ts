@@ -1,5 +1,7 @@
-import '@testing-library/jest-dom';
-import { beforeAll, afterEach, afterAll } from 'vitest';
+import { expect, beforeAll, afterEach, afterAll } from 'vitest';
+import * as matchers from '@testing-library/jest-dom/matchers';
+
+expect.extend(matchers);
 import { server } from './test-utils/msw-setup';
 
 // Setup MSW

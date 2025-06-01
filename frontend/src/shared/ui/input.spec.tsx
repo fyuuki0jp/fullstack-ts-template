@@ -4,38 +4,40 @@ import { Input } from './input';
 
 describe('Input', () => {
   it('renders input with label', () => {
-    render(<Input label="Test Label" />);
+    const { container } = render(<Input label="Test Label" />);
 
-    expect(screen.getByRole('textbox')).toBeInTheDocument();
+    expect(container.querySelector('input')).toBeInTheDocument();
     expect(screen.getByText('Test Label')).toBeInTheDocument();
   });
 
   it('renders without label', () => {
-    render(<Input placeholder="Test placeholder" />);
+    const { container } = render(<Input placeholder="Test placeholder" />);
 
     expect(screen.getByPlaceholderText('Test placeholder')).toBeInTheDocument();
-    expect(screen.queryByText('Test Label')).not.toBeInTheDocument();
+    // Check that no label element exists in this specific container
+    expect(container.querySelector('label')).not.toBeInTheDocument();
   });
 
   it('displays error message', () => {
-    render(<Input label="Test" error="This field is required" />);
+    const { container } = render(<Input label="Test" error="This field is required" />);
 
     expect(screen.getByText('This field is required')).toBeInTheDocument();
-    expect(screen.getByRole('textbox')).toHaveClass('border-red-300');
+    expect(container.querySelector('input')).toHaveClass('border-red-300');
   });
 
   it('applies correct styling without error', () => {
-    render(<Input label="Test" />);
+    const { container } = render(<Input label="Test" />);
+    const input = container.querySelector('input');
 
-    expect(screen.getByRole('textbox')).toHaveClass('border-gray-300');
-    expect(screen.getByRole('textbox')).not.toHaveClass('border-red-300');
+    expect(input).toHaveClass('border-gray-300');
+    expect(input).not.toHaveClass('border-red-300');
   });
 
   it('handles input changes', () => {
     const handleChange = vi.fn();
-    render(<Input label="Test" onChange={handleChange} />);
+    const { container } = render(<Input label="Test" onChange={handleChange} />);
 
-    const input = screen.getByRole('textbox');
+    const input = container.querySelector('input') as HTMLInputElement;
     fireEvent.change(input, { target: { value: 'test value' } });
 
     expect(handleChange).toHaveBeenCalledWith('test value');
@@ -43,14 +45,14 @@ describe('Input', () => {
   });
 
   it('forwards ref correctly', () => {
-    render(<Input label="Test" />);
+    const { container } = render(<Input label="Test" />);
 
     // React Aria manages refs internally, so we test that the input renders correctly
-    expect(screen.getByRole('textbox')).toBeInTheDocument();
+    expect(container.querySelector('input')).toBeInTheDocument();
   });
 
   it('passes through HTML attributes', () => {
-    render(
+    const { container } = render(
       <Input
         label="Test"
         type="email"
@@ -60,7 +62,7 @@ describe('Input', () => {
       />
     );
 
-    const input = screen.getByRole('textbox');
+    const input = container.querySelector('input') as HTMLInputElement;
     expect(input).toHaveAttribute('type', 'email');
     expect(input).toHaveAttribute('placeholder', 'Enter email');
     expect(input).toHaveAttribute('aria-required', 'true');
@@ -68,8 +70,8 @@ describe('Input', () => {
   });
 
   it('applies custom className', () => {
-    render(<Input label="Test" className="custom-input" />);
+    const { container } = render(<Input label="Test" className="custom-input" />);
 
-    expect(screen.getByRole('textbox')).toHaveClass('custom-input');
+    expect(container.querySelector('input')).toHaveClass('custom-input');
   });
 });
