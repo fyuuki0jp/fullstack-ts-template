@@ -1,7 +1,7 @@
 import { serve } from '@hono/node-server';
 import { Hono } from 'hono';
-import { SqliteAdapter } from '@/shared/adapters/db';
-import createUserRoutes from '@/features/user/api/routes';
+import { SqliteAdapter } from './shared/adapters/db';
+import createUserRoutes from './features/user/api/routes';
 
 // Initialize database
 const db = new SqliteAdapter();

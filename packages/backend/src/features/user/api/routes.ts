@@ -3,7 +3,7 @@ import { isErr } from '@fyuuki0jp/railway-result';
 import { createUser } from '../commands/create-user';
 import { getUsers } from '../queries/get-users';
 import { userRepositoryImpl } from '../domain/user-repository-impl';
-import type { DbAdapter } from '@/shared/adapters/db';
+import type { DbAdapter } from '../../../shared/adapters/db';
 
 export default (db: DbAdapter) => {
   return new Hono()
