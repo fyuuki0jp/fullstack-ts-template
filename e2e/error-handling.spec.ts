@@ -63,7 +63,9 @@ test.describe('Error Handling', () => {
     // Should show error state instead of user list
     await expect(page.getByText('Error loading users')).toBeVisible();
     await expect(page.getByText('Database connection failed')).toBeVisible();
-    await expect(page.getByText('Please try refreshing the page')).toBeVisible();
+    await expect(
+      page.getByText('Please try refreshing the page')
+    ).toBeVisible();
   });
 
   test('should recover from errors when retrying', async ({ page }) => {

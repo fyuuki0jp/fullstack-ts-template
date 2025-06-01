@@ -16,17 +16,16 @@ export const Input = ({
   ...props
 }: InputProps) => {
   const ref = useRef<HTMLInputElement>(null);
-  const { labelProps, inputProps, errorMessageProps } =
-    useTextField(
-      {
-        ...props,
-        isDisabled,
-        isRequired,
-        validationState: error ? 'invalid' : 'valid',
-        errorMessage: error,
-      },
-      ref
-    );
+  const { labelProps, inputProps, errorMessageProps } = useTextField(
+    {
+      ...props,
+      isDisabled,
+      isRequired,
+      validationState: error ? 'invalid' : 'valid',
+      errorMessage: error,
+    },
+    ref
+  );
 
   return (
     <div className="w-full">
