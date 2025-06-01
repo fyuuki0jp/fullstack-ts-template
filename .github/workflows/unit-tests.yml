@@ -1,0 +1,39 @@
+name: Unit Tests
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+    branches: [main]
+
+jobs:
+  test:
+    name: Run Unit Tests
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+          cache: 'yarn'
+
+      - name: Install dependencies
+        run: yarn install --frozen-lockfile
+        env:
+          NPM_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Run type checking
+        run: yarn typecheck
+
+      - name: Run linting
+        run: yarn lint
+
+      - name: Run backend unit tests
+        run: yarn workspace @spa-hono/backend test
+
+      - name: Run frontend unit tests
+        run: yarn workspace @spa-hono/frontend test
