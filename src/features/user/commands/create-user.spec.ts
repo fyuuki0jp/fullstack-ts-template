@@ -146,7 +146,9 @@ describe('createUser command', () => {
 
     expect(isErr(result)).toBe(true);
     if (isErr(result)) {
-      expect(result.error.message).toBe('UNIQUE constraint failed: users.email');
+      expect(result.error.message).toBe(
+        'UNIQUE constraint failed: users.email'
+      );
     }
   });
 

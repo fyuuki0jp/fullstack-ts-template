@@ -9,8 +9,6 @@ describe('UserRepositoryImpl', () => {
 
   beforeEach(() => {
     mockDb = new MockDbAdapter();
-    // Initialize empty users table
-    mockDb.setData('users', []);
     userRepo = userRepositoryImpl.inject({ db: mockDb })();
   });
 

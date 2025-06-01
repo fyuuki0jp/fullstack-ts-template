@@ -143,7 +143,7 @@ describe('SqliteAdapter', () => {
       }
 
       // Verify data persisted
-      const verifyResult = await adapter.query(
+      const verifyResult = await adapter.query<{ count: number }>(
         'SELECT COUNT(*) as count FROM test'
       );
       if (verifyResult.success) {
@@ -166,35 +166,11 @@ describe('SqliteAdapter', () => {
       expect(isErr(result)).toBe(true);
 
       // Verify rollback - only original row should exist
-      const verifyResult = await adapter.query(
+      const verifyResult = await adapter.query<{ count: number }>(
         'SELECT COUNT(*) as count FROM test'
       );
       if (verifyResult.success) {
         expect(verifyResult.data[0].count).toBe(1);
-      }
-    });
-
-    it.skip('should handle nested transactions', async () => {
-      await adapter.execute(
-        'CREATE TABLE test (id INTEGER PRIMARY KEY, value INTEGER)'
-      );
-
-      const result = await adapter.transaction(async (tx1) => {
-        await tx1.execute('INSERT INTO test (value) VALUES (?)', [1]);
-
-        const nestedResult = await tx1.transaction(async (tx2) => {
-          await tx2.execute('INSERT INTO test (value) VALUES (?)', [2]);
-          return tx2.query<{ count: number }>(
-            'SELECT COUNT(*) as count FROM test'
-          );
-        });
-
-        return nestedResult;
-      });
-
-      expect(result.success).toBe(true);
-      if (result.success) {
-        expect(result.data[0].count).toBe(2);
       }
     });
   });
