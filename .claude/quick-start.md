@@ -1,38 +1,38 @@
-# 🚀 Quick Start Guide
+# 🚀 クイックスタートガイド
 
-Get your full-stack app running in 5 minutes!
+5分でフルスタックアプリを動かそう！
 
-## Prerequisites
+## 前提条件
 
-- Node.js 18+ and Yarn installed
-- Basic knowledge of TypeScript, React, and SQL
+- Node.js 18+とYarnがインストール済み
+- TypeScript、React、SQLの基本知識
 
-## 1. Initial Setup
+## 1. 初期セットアップ
 
 ```bash
-# Clone/use this template
+# このテンプレートをクローン/使用
 git clone [your-repo-url]
 cd [your-project-name]
 
-# Install dependencies
+# 依存関係のインストール
 yarn install
 
-# Start development
+# 開発開始
 yarn dev
 ```
 
-Your app is now running:
-- Frontend: http://localhost:5173
-- Backend API: http://localhost:3000/api
+アプリが起動しました：
+- フロントエンド: http://localhost:5173
+- バックエンドAPI: http://localhost:3000/api
 
-## 2. Create Your First Feature
+## 2. 最初の機能を作成
 
-Let's create a "Product" feature step by step.
+「Product」機能をステップバイステップで作成してみましょう。
 
-### Step 1: Define the Entity
+### ステップ1：エンティティの定義
 
 ```bash
-# Create entity file
+# エンティティファイルを作成
 touch src/entities/product.ts
 ```
 
@@ -47,63 +47,63 @@ export interface Product extends Entity {
 }
 ```
 
-### Step 2: Create Feature Structure
+### ステップ2：機能構造の作成
 
 ```bash
-# Create feature directories
+# 機能ディレクトリを作成
 mkdir -p src/features/product/{api,commands,queries,domain}
 ```
 
-### Step 3: Write Tests First (TDD)
+### ステップ3：テストファーストで書く（TDD）
 
 ```bash
-# Create test file
+# テストファイルを作成
 touch src/features/product/commands/create-product.spec.ts
 ```
 
-See the existing `user` feature for test examples!
+既存の`user`機能を参考にテスト例を確認してください！
 
-### Step 4: Implement the Feature
+### ステップ4：機能の実装
 
-Follow this order:
-1. **Domain**: Repository interface & implementation
-2. **Commands**: Write operations (create, update, delete)
-3. **Queries**: Read operations (get, list)
-4. **API Routes**: HTTP endpoints
+この順序で実装してください：
+1. **Domain**：リポジトリインターフェースと実装
+2. **Commands**：書き込み操作（create、update、delete）
+3. **Queries**：読み込み操作（get、list）
+4. **API Routes**：HTTPエンドポイント
 
-### Step 5: Add Route
+### ステップ5：ルートを追加
 
 ```bash
-# Add route to your server.ts
+# server.tsにルートを追加
 ```
 
-## 3. Common Tasks
+## 3. 一般的なタスク
 
-### Add a New API Endpoint
+### 新しいAPIエンドポイントの追加
 
-1. Add route in `src/features/[feature]/api/routes.ts`
-2. Use method chaining pattern
-3. Return consistent response format
+1. `src/features/[feature]/api/routes.ts`にルートを追加
+2. メソッドチェーンパターンを使用
+3. 一貫したレスポンス形式を返す
 
-### Run Tests
+### テストの実行
 
 ```bash
-# Run all tests
+# すべてのテストを実行
 yarn test
 
-# Run tests in watch mode
+# ウォッチモードでテストを実行
 yarn test --watch
 
-# Run specific test file
+# 特定のテストファイルを実行
 yarn test user.spec
 ```
 
-### Database Migrations
+### データベースマイグレーション
 
-The database schema is created automatically in `src/server.ts`. To add a new table:
+データベーススキーマは`src/server.ts`で自動的に作成されます。新しいテーブルを追加するには：
 
 ```typescript
-// In src/server.ts
+// src/server.ts内で
 db.exec(`
   CREATE TABLE IF NOT EXISTS products (
     id TEXT PRIMARY KEY,
@@ -116,53 +116,56 @@ db.exec(`
 `);
 ```
 
-## 4. Best Practices Checklist
+## 4. ベストプラクティス チェックリスト
 
-✅ **Before Writing Code:**
-- [ ] Write tests first (TDD)
-- [ ] Check existing patterns in codebase
-- [ ] Plan your feature structure
+✅ **コードを書く前に：**
+- [ ] テストファーストで書く（TDD）
+- [ ] コードベースの既存パターンを確認
+- [ ] 機能構造を計画
 
-✅ **While Coding:**
-- [ ] All functions return `Result<T, E>`
-- [ ] Never throw exceptions
-- [ ] Follow FSD structure
-- [ ] Keep business logic in commands/queries
+✅ **コーディング中：**
+- [ ] すべての関数が`Result<T, E>`を返す
+- [ ] 例外を投げない
+- [ ] FSD構造に従う
+- [ ] ビジネスロジックはcommands/queriesに保持
 
-✅ **After Coding:**
-- [ ] Run `yarn lint`
-- [ ] Run `yarn typecheck`
-- [ ] Run `yarn test`
-- [ ] Check that all tests pass
+✅ **コーディング後：**
+- [ ] `yarn lint`を実行
+- [ ] `yarn typecheck`を実行
+- [ ] `yarn test`を実行
+- [ ] すべてのテストが通ることを確認
 
-## 5. Quick Reference
+## 5. クイックリファレンス
 
-### File Naming
-- Tests: `*.spec.ts`
-- Routes: `api/routes.ts`
-- Commands: `commands/[action]-[entity].ts`
-- Queries: `queries/get-[entities].ts`
+### ファイル命名
 
-### Status Codes
-- `200` - Success (GET)
-- `201` - Created (POST)
-- `400` - Bad Request (validation)
-- `500` - Server Error (database)
+- テスト：`*.spec.ts`
+- ルート：`api/routes.ts`
+- コマンド：`commands/[action]-[entity].ts`
+- クエリ：`queries/get-[entities].ts`
 
-### Response Format
+### ステータスコード
+
+- `200` - 成功（GET）
+- `201` - 作成（POST）
+- `400` - Bad Request（バリデーション）
+- `500` - サーバーエラー（データベース）
+
+### レスポンス形式
+
 ```typescript
-// Success
-{ users: User[] }      // Collection
-{ user: User }         // Single
+// 成功
+{ users: User[] }      // コレクション
+{ user: User }         // 単一
 
-// Error
-{ error: string }      // All errors
+// エラー
+{ error: string }      // すべてのエラー
 ```
 
-## Need More Help?
+## さらにヘルプが必要？
 
-- Check existing `user` feature for examples
-- See [Architecture Overview](./architecture.md) for patterns
-- See [Testing Guide](./testing.md) for test patterns
-- See [Backend Guide](./backend.md) for API development
-- See [Frontend Guide](./frontend.md) for React patterns
+- 例については既存の`user`機能を確認
+- パターンについては[アーキテクチャ概要](./architecture.md)を参照
+- テストパターンについては[テストガイド](./testing.md)を参照
+- API開発については[バックエンドガイド](./backend.md)を参照
+- Reactパターンについては[フロントエンドガイド](./frontend.md)を参照

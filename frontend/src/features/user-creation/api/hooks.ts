@@ -1,7 +1,7 @@
 import { useMutation, useQueryClient } from '@tanstack/react-query';
-import { apiClient } from '@/lib/api-client';
+import { apiClient } from '@/shared/lib';
 
-interface CreateUserInput {
+export interface CreateUserInput {
   email: string;
   name: string;
 }
@@ -30,7 +30,6 @@ export const useCreateUser = () => {
       throw new Error('Invalid response format');
     },
     onSuccess: () => {
-      // Invalidate and refetch users list
       queryClient.invalidateQueries({ queryKey: ['users'] });
     },
   });

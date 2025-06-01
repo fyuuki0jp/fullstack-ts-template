@@ -1,17 +1,17 @@
-# 🏗️ Architecture Overview
+# 🏗️ アーキテクチャ概要
 
-This document explains the technical architecture and design decisions of this full-stack application.
+このドキュメントでは、フルスタックアプリケーションの技術アーキテクチャと設計決定について説明します。
 
-## Core Architecture Patterns
+## コアアーキテクチャパターン
 
-### 1. Railway-Oriented Programming (ROP)
+### 1. Railway-Oriented Programming（ROP）
 
-Every function returns a `Result<T, E>` type for explicit error handling:
+明示的なエラーハンドリングのため、すべての関数が`Result<T, E>`型を返します：
 
 ```typescript
 import { Result, ok, err, isErr } from '@fyuuki0jp/railway-result';
 
-// ✅ Good: Explicit error handling
+// ✅ 良い例：明示的なエラーハンドリング
 async function getUser(id: string): Promise<Result<User, Error>> {
   const result = await db.query('SELECT * FROM users WHERE id = ?', [id]);
   if (isErr(result)) return result;
@@ -23,84 +23,84 @@ async function getUser(id: string): Promise<Result<User, Error>> {
   return ok(transformToUser(result.data[0]));
 }
 
-// ❌ Bad: Throwing exceptions
+// ❌ 悪い例：例外を投げる
 async function getUser(id: string): Promise<User> {
   const user = await db.query('SELECT * FROM users WHERE id = ?', [id]);
-  if (!user) throw new Error('User not found'); // Never do this!
+  if (!user) throw new Error('User not found'); // これは絶対にやらない！
   return user;
 }
 ```
 
-### 2. Feature-Sliced Design (FSD)
+### 2. Feature-Sliced Design（FSD）
 
-Features are organized vertically with clear boundaries:
+機能は明確な境界を持つ垂直的な組織化がされています：
 
 ```
 src/features/user/
-├── api/          # Public API layer
-│   └── routes.ts # HTTP endpoints
-├── commands/     # Write operations
+├── api/          # パブリックAPI層
+│   └── routes.ts # HTTPエンドポイント
+├── commands/     # 書き込み操作
 │   └── create-user.ts
-├── queries/      # Read operations
+├── queries/      # 読み込み操作
 │   └── get-users.ts
-└── domain/       # Business logic
-    ├── repository.ts      # Interface
-    └── user-repository-impl.ts # Implementation
+└── domain/       # ビジネスロジック
+    ├── repository.ts      # インターフェース
+    └── user-repository-impl.ts # 実装
 ```
 
-### 3. CQRS (Command Query Responsibility Segregation)
+### 3. CQRS（Command Query Responsibility Segregation）
 
-Commands and queries are separated for clarity:
+明確性のためにコマンドとクエリが分離されています：
 
 ```typescript
-// Command: Has side effects, validates business rules
+// コマンド：副作用あり、ビジネスルールを検証
 export const createUser = depend(
   { userRepository },
   async ({ userRepository }, input: CreateUserInput) => {
-    // Business validation
+    // ビジネスバリデーション
     if (!input.email.includes('@')) {
       return err(new Error('Invalid email format'));
     }
     
-    // Delegate to repository
+    // リポジトリに委譲
     return userRepository.create(input);
   }
 );
 
-// Query: No side effects, just data retrieval
+// クエリ：副作用なし、データ取得のみ
 export const getUsers = depend(
   { userRepository },
   async ({ userRepository }) => userRepository.findAll()
 );
 ```
 
-### 4. Dependency Injection with Velona
+### 4. Velonaによる依存性注入
 
-Dependencies are injected manually for testability:
+テスタビリティのため、依存性は手動で注入されます：
 
 ```typescript
-// Define dependencies
+// 依存性の定義
 export const createUser = depend(
   { userRepository: {} as UserRepository },
   async ({ userRepository }, input) => {
-    // Implementation
+    // 実装
   }
 );
 
-// Inject at runtime
+// 実行時に注入
 const injectedCreateUser = createUser.inject({
   userRepository: userRepositoryImpl.inject({ db })()
 });
 
-// Use in route
+// ルートで使用
 const result = await injectedCreateUser(input);
 ```
 
-## Database Architecture
+## データベースアーキテクチャ
 
-### Adapter Pattern
+### アダプターパターン
 
-Database operations are abstracted behind an interface:
+データベース操作はインターフェースの背後に抽象化されています：
 
 ```typescript
 export interface DbAdapter {
@@ -112,39 +112,39 @@ export interface DbAdapter {
 }
 ```
 
-### Entity Management
+### エンティティ管理
 
-All entities follow a consistent structure:
+すべてのエンティティは一貫した構造に従います：
 
 ```typescript
 export interface Entity {
   id: string;        // UUID v4
-  createdAt: Date;   // Created timestamp
-  updatedAt: Date;   // Last update timestamp
+  createdAt: Date;   // 作成タイムスタンプ
+  updatedAt: Date;   // 最終更新タイムスタンプ
 }
 
-// Domain entities extend Entity
+// ドメインエンティティはEntityを拡張
 export interface User extends Entity {
   email: string;
   name: string;
 }
 ```
 
-### Data Transformation
+### データ変換
 
-Database rows are transformed at the repository level:
+データベース行はリポジトリレベルで変換されます：
 
 ```typescript
-// Database row (snake_case)
+// データベース行（snake_case）
 interface UserRow {
   id: string;
   email: string;
   name: string;
-  created_at: string;  // ISO string
-  updated_at: string;  // ISO string
+  created_at: string;  // ISO文字列
+  updated_at: string;  // ISO文字列
 }
 
-// Transform to domain entity (camelCase)
+// ドメインエンティティに変換（camelCase）
 function transformToUser(row: UserRow): User {
   return {
     id: row.id,
@@ -156,11 +156,11 @@ function transformToUser(row: UserRow): User {
 }
 ```
 
-## API Architecture
+## APIアーキテクチャ
 
-### Route Organization
+### ルート組織化
 
-Routes use Hono's method chaining for clean code:
+ルートはクリーンなコードのためHonoのメソッドチェーンを使用します：
 
 ```typescript
 export default (db: DbAdapter) => {
@@ -183,12 +183,12 @@ export default (db: DbAdapter) => {
 };
 ```
 
-### Error Handling
+### エラーハンドリング
 
-Consistent error responses across the API:
+API全体で一貫したエラーレスポンス：
 
 ```typescript
-// Route handler pattern
+// ルートハンドラーパターン
 const result = await useCase(input);
 
 if (isErr(result)) {
@@ -199,142 +199,142 @@ if (isErr(result)) {
 return c.json({ user: result.data }, 201);
 ```
 
-### Response Formats
+### レスポンス形式
 
-Consistent JSON response structure:
+一貫したJSONレスポンス構造：
 
 ```typescript
-// Success responses
+// 成功レスポンス
 { users: User[] }        // GET /users
 { user: User }          // GET /users/:id, POST /users
 { message: "Deleted" }  // DELETE /users/:id
 
-// Error responses
-{ error: "Error message" }  // All errors
+// エラーレスポンス
+{ error: "Error message" }  // すべてのエラー
 ```
 
-## Client Integration
+## クライアント統合
 
-The API is designed to be consumed by any client (React, Vue, mobile apps, etc.). The focus is on providing a clean, consistent API that follows REST principles.
+APIは任意のクライアント（React、Vue、モバイルアプリなど）で使用できるよう設計されています。RESTの原則に従ったクリーンで一貫したAPIの提供に焦点を当てています。
 
-## Testing Architecture
+## テストアーキテクチャ
 
-### Test Organization
+### テスト組織化
 
-Tests live next to the code they test:
+テストはテスト対象のコードの隣に配置されます：
 
 ```
 create-user.ts
-create-user.spec.ts  # Test file
+create-user.spec.ts  # テストファイル
 ```
 
-### Mock Strategy
+### モック戦略
 
-Different mocking approaches by layer:
+レイヤーごとに異なるモックアプローチ：
 
 ```typescript
-// Repository tests: Use MockDbAdapter
+// リポジトリテスト：MockDbAdapterを使用
 const mockDb = new MockDbAdapter();
 mockDb.setData('users', [testUser]);
 
-// Command tests: Mock repository
+// コマンドテスト：リポジトリをモック
 const mockRepo = {
   create: vi.fn().mockResolvedValue(ok(user))
 };
 
-// Route tests: Full integration with MockDbAdapter
+// ルートテスト：MockDbAdapterでフル統合
 const app = new Hono().route('/', createUserRoutes(mockDb));
 const response = await app.request('/');
 ```
 
-## Security Considerations
+## セキュリティ考慮事項
 
-### Input Validation
+### 入力バリデーション
 
-- Validation happens in commands, not repositories
-- Use explicit validation with clear error messages
-- Never trust client input
+- バリデーションはリポジトリではなくコマンドで行う
+- 明確なエラーメッセージで明示的バリデーションを使用
+- クライアント入力を決して信頼しない
 
-### SQL Injection Prevention
+### SQLインジェクション防止
 
-- Always use parameterized queries
-- Never concatenate SQL strings
+- 常にパラメータ化クエリを使用
+- SQL文字列を決して連結しない
 
 ```typescript
-// ✅ Good: Parameterized query
+// ✅ 良い例：パラメータ化クエリ
 db.query('SELECT * FROM users WHERE id = ?', [id]);
 
-// ❌ Bad: String concatenation
+// ❌ 悪い例：文字列連結
 db.query(`SELECT * FROM users WHERE id = '${id}'`);
 ```
 
-### Authentication & Authorization
+### 認証・認可
 
-- Implement in middleware (not included in template)
-- Add to routes that need protection
-- Consider JWT or session-based auth
+- ミドルウェアで実装（テンプレートには含まれない）
+- 保護が必要なルートに追加
+- JWTまたはセッションベース認証を検討
 
-## Performance Considerations
+## パフォーマンス考慮事項
 
-### Database
+### データベース
 
-- SQLite with WAL mode for concurrent reads
-- Indexes on frequently queried columns
-- Connection pooling not needed (SQLite)
+- 同時読み込み用のWALモード付きSQLite
+- 頻繁にクエリされる列にインデックス
+- 接続プーリングは不要（SQLite）
 
 ### API
 
-- Lightweight Hono framework
-- No unnecessary middleware
-- Efficient error handling
+- 軽量なHonoフレームワーク
+- 不要なミドルウェアなし
+- 効率的なエラーハンドリング
 
-### Frontend
+### フロントエンド
 
-- Vite for fast development
-- Code splitting with React.lazy (when needed)
-- Optimized production builds
+- 高速開発用Vite
+- 必要に応じてReact.lazyでコード分割
+- 最適化された本番ビルド
 
-## Deployment Architecture
+## デプロイメントアーキテクチャ
 
-### Backend Deployment
+### バックエンドデプロイメント
 
-- Single Node.js process
-- SQLite file on persistent volume
-- Environment variables for config
+- 単一のNode.jsプロセス
+- 永続ボリューム上のSQLiteファイル
+- 設定用環境変数
 
-### Frontend Deployment
+### フロントエンドデプロイメント
 
-- Static files (HTML, JS, CSS)
-- CDN for global distribution
-- API proxy configuration
+- 静的ファイル（HTML、JS、CSS）
+- グローバル配信用CDN
+- APIプロキシ設定
 
-### Environment Variables
+### 環境変数
 
 ```bash
-# Backend
+# バックエンド
 PORT=3000
 DATABASE_PATH=./db.sqlite
 
-# Frontend (build time)
+# フロントエンド（ビルド時）
 VITE_API_URL=https://api.example.com
 ```
 
-## Future Considerations
+## 将来の考慮事項
 
-### Scaling
+### スケーリング
 
-- PostgreSQL for multi-instance deployments
-- Redis for caching
-- Message queue for async operations
+- マルチインスタンスデプロイメント用PostgreSQL
+- キャッシュ用Redis
+- 非同期操作用メッセージキュー
 
-### Monitoring
+### 監視
 
-- Structured logging
-- Error tracking (Sentry)
-- Performance monitoring
+- 構造化ログ
+- エラートラッキング（Sentry）
+- パフォーマンス監視
 
-### Advanced Features
+### 高度な機能
 
-- Real-time updates (WebSockets)
-- File uploads
-- Background jobs
+- リアルタイム更新（WebSockets）
+- ファイルアップロード
+- バックグラウンドジョブ

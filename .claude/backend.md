@@ -1,10 +1,10 @@
-# 🚀 Backend Development Guide
+# 🚀 バックエンド開発ガイド
 
-Complete guide for Hono backend API development with FSD, CQRS, and Railway Result patterns.
+FSD、CQRS、Railway Resultパターンを採用したHono バックエンドAPI開発の完全ガイド。
 
-## API Route Development
+## APIルート開発
 
-### Route Structure with Method Chaining
+### メソッドチェーンによるルート構造
 
 ```typescript
 // src/features/user/api/routes.ts
@@ -13,7 +13,7 @@ import { isErr } from '@fyuuki0jp/railway-result';
 import type { DbAdapter } from '../../../shared/adapters/db';
 
 export default (db: DbAdapter) => {
-  // Dependencies are injected at route creation
+  // 依存性はルート作成時に注入
   const userRepository = userRepositoryImpl.inject({ db })();
   const createUserUseCase = createUser.inject({ userRepository });
   const getUsersUseCase = getUsers.inject({ userRepository });
@@ -90,12 +90,12 @@ export default (db: DbAdapter) => {
         return c.json({ error: result.error.message }, 400);
       }
       
-      return c.json({ message: 'User deleted successfully' });
+      return c.json({ message: 'ユーザーが正常に削除されました' });
     });
 };
 ```
 
-### Error Status Code Mapping
+### エラーステータスコードマッピング
 
 ```typescript
 function determineStatusCode(error: Error): number {
@@ -121,14 +121,14 @@ function determineStatusCode(error: Error): number {
       message.includes('connection') ||
       message.includes('internal')) return 500;
   
-  // 400 Bad Request (default for validation errors)
+  // 400 Bad Request（バリデーションエラーのデフォルト）
   return 400;
 }
 ```
 
-## Command Implementation (Write Operations)
+## コマンド実装（書き込み操作）
 
-### Basic Command Structure
+### 基本的なコマンド構造
 
 ```typescript
 // src/features/user/commands/create-user.ts
@@ -140,26 +140,26 @@ import type { CreateUserInput } from '../types';
 export const createUser = depend(
   { userRepository: {} as UserRepository },
   async ({ userRepository }, input: CreateUserInput) => {
-    // 1. Input validation
+    // 1. 入力バリデーション
     if (!input.email || !input.name) {
-      return err(new Error('Email and name are required'));
+      return err(new Error('メールアドレスと名前は必須です'));
     }
     
     if (!input.email.includes('@')) {
-      return err(new Error('Invalid email format'));
+      return err(new Error('メールアドレスの形式が無効です'));
     }
     
     if (input.name.length < 2) {
-      return err(new Error('Name must be at least 2 characters'));
+      return err(new Error('名前は最低2文字以上である必要があります'));
     }
     
-    // 2. Business logic validation
+    // 2. ビジネスロジックバリデーション
     const existingUser = await userRepository.findByEmail(input.email);
     if (isOk(existingUser) && existingUser.data) {
-      return err(new Error('User with this email already exists'));
+      return err(new Error('このメールアドレスのユーザーは既に存在します'));
     }
     
-    // 3. Execute operation
+    // 3. 操作実行
     return userRepository.create({
       email: input.email.toLowerCase().trim(),
       name: input.name.trim(),
@@ -168,7 +168,7 @@ export const createUser = depend(
 );
 ```
 
-### Complex Command with Transaction
+### トランザクション付き複雑なコマンド
 
 ```typescript
 // src/features/order/commands/create-order.ts
@@ -180,29 +180,29 @@ export const createOrder = depend(
     db: {} as DbAdapter,
   },
   async ({ orderRepository, productRepository, inventoryService, db }, input: CreateOrderInput) => {
-    // Use transaction for complex operations
+    // 複雑な操作にはトランザクションを使用
     return db.transaction(async (tx) => {
-      // 1. Validate products exist
+      // 1. 商品の存在確認
       for (const item of input.items) {
         const product = await productRepository.findById(item.productId);
         if (isErr(product) || !product.data) {
-          return err(new Error(`Product ${item.productId} not found`));
+          return err(new Error(`商品 ${item.productId} が見つかりません`));
         }
       }
       
-      // 2. Check inventory
+      // 2. 在庫確認
       const inventoryCheck = await inventoryService.checkAvailability(input.items);
       if (isErr(inventoryCheck)) {
         return inventoryCheck;
       }
       
-      // 3. Calculate total
+      // 3. 合計金額計算
       const total = await calculateOrderTotal(input.items);
       if (isErr(total)) {
         return total;
       }
       
-      // 4. Create order
+      // 4. 注文作成
       const order = await orderRepository.create({
         userId: input.userId,
         items: input.items,
@@ -214,7 +214,7 @@ export const createOrder = depend(
         return order;
       }
       
-      // 5. Reserve inventory
+      // 5. 在庫確保
       const reserved = await inventoryService.reserve(order.data.id, input.items);
       if (isErr(reserved)) {
         return reserved;
@@ -226,9 +226,9 @@ export const createOrder = depend(
 );
 ```
 
-## Query Implementation (Read Operations)
+## クエリ実装（読み込み操作）
 
-### Simple Query
+### シンプルなクエリ
 
 ```typescript
 // src/features/user/queries/get-users.ts
@@ -238,13 +238,13 @@ import type { UserRepository } from '../domain/repository';
 export const getUsers = depend(
   { userRepository: {} as UserRepository },
   async ({ userRepository }) => {
-    // Queries should be simple - just delegate to repository
+    // クエリはシンプルに - リポジトリに委譲するだけ
     return userRepository.findAll();
   }
 );
 ```
 
-### Query with Filters
+### フィルター付きクエリ
 
 ```typescript
 // src/features/product/queries/search-products.ts
@@ -262,7 +262,7 @@ export interface SearchFilters {
 export const searchProducts = depend(
   { productRepository: {} as ProductRepository },
   async ({ productRepository }, filters: SearchFilters) => {
-    // Validate pagination
+    // ページネーションのバリデーション
     const limit = Math.min(filters.limit || 20, 100);
     const offset = Math.max(filters.offset || 0, 0);
     
@@ -275,9 +275,9 @@ export const searchProducts = depend(
 );
 ```
 
-## Repository Implementation
+## リポジトリ実装
 
-### Repository Interface
+### リポジトリインターフェース
 
 ```typescript
 // src/features/user/domain/repository.ts
@@ -294,7 +294,7 @@ export interface UserRepository {
 }
 ```
 
-### Repository Implementation
+### リポジトリ実装
 
 ```typescript
 // src/features/user/domain/user-repository-impl.ts
@@ -325,9 +325,9 @@ export const userRepositoryImpl = depend(
       );
       
       if (isErr(result)) {
-        // Handle unique constraint errors
+        // UNIQUE制約エラーの処理
         if (result.error.message.includes('UNIQUE constraint')) {
-          return err(new Error('User with this email already exists'));
+          return err(new Error('このメールアドレスのユーザーは既に存在します'));
         }
         return result;
       }
@@ -377,7 +377,7 @@ export const userRepositoryImpl = depend(
       }
       
       if (updates.length === 0) {
-        return err(new Error('No fields to update'));
+        return err(new Error('更新するフィールドがありません'));
       }
       
       updates.push('updated_at = ?');
@@ -394,7 +394,7 @@ export const userRepositoryImpl = depend(
       return this.findById(id).then(result => 
         isErr(result) ? result :
         result.data ? ok(result.data) :
-        err(new Error('User not found'))
+        err(new Error('ユーザーが見つかりません'))
       );
     },
 
@@ -420,9 +420,9 @@ function transformToUser(row: UserRow): User {
 }
 ```
 
-## Database Adapter
+## データベースアダプター
 
-### SQLite Adapter Implementation
+### SQLiteアダプター実装
 
 ```typescript
 // src/shared/adapters/db/sqlite.ts
@@ -433,7 +433,7 @@ import type { DbAdapter } from './types';
 export function createSqliteAdapter(filename: string): DbAdapter {
   const db = new Database(filename);
   
-  // Enable WAL mode for better concurrency
+  // より良い同時性のためWALモードを有効化
   db.pragma('journal_mode = WAL');
   
   return {
@@ -443,7 +443,7 @@ export function createSqliteAdapter(filename: string): DbAdapter {
         const rows = params ? stmt.all(...params) : stmt.all();
         return ok(rows as T[]);
       } catch (error) {
-        return err(new Error(`Query failed: ${error.message}`));
+        return err(new Error(`クエリが失敗しました: ${error.message}`));
       }
     },
 
@@ -453,14 +453,14 @@ export function createSqliteAdapter(filename: string): DbAdapter {
         params ? stmt.run(...params) : stmt.run();
         return ok(undefined);
       } catch (error) {
-        return err(new Error(`Execute failed: ${error.message}`));
+        return err(new Error(`実行が失敗しました: ${error.message}`));
       }
     },
 
     async transaction<T>(fn) {
       const tx = db.transaction(async () => {
         try {
-          // Pass self as transaction adapter
+          // トランザクションアダプターとして自分自身を渡す
           const result = await fn(this);
           if (isErr(result)) {
             throw result.error;
@@ -481,9 +481,9 @@ export function createSqliteAdapter(filename: string): DbAdapter {
 }
 ```
 
-## Server Setup
+## サーバーセットアップ
 
-### Main Server Configuration
+### メインサーバー設定
 
 ```typescript
 // src/server.ts
@@ -495,10 +495,10 @@ import { createSqliteAdapter } from './shared/adapters/db/sqlite';
 import createUserRoutes from './features/user/api/routes';
 import createProductRoutes from './features/product/api/routes';
 
-// Initialize database
+// データベース初期化
 const db = createSqliteAdapter('./db.sqlite');
 
-// Create tables
+// テーブル作成
 db.execute(`
   CREATE TABLE IF NOT EXISTS users (
     id TEXT PRIMARY KEY,
@@ -520,40 +520,40 @@ db.execute(`
   )
 `);
 
-// Create app
+// アプリ作成
 const app = new Hono();
 
-// Global middleware
+// グローバルミドルウェア
 app.use('*', logger());
 app.use('*', cors());
 
-// Mount feature routes
+// 機能ルートのマウント
 const route = app
   .basePath('/api')
   .route('/users', createUserRoutes(db))
   .route('/products', createProductRoutes(db));
 
-// Export type for frontend
+// フロントエンド用の型エクスポート
 export type ApiSchema = typeof route;
 
-// Health check
+// ヘルスチェック
 app.get('/health', (c) => c.json({ status: 'ok' }));
 
-// Start server
+// サーバー開始
 serve(
   {
     port: 3000,
     fetch: app.fetch,
   },
   (info) => {
-    console.log(`Server running at http://localhost:${info.port}`);
+    console.log(`サーバーが http://localhost:${info.port} で起動しました`);
   }
 );
 ```
 
-## Middleware Patterns
+## ミドルウェアパターン
 
-### Authentication Middleware
+### 認証ミドルウェア
 
 ```typescript
 // src/middleware/auth.ts
@@ -564,7 +564,7 @@ export const auth = createMiddleware(async (c, next) => {
   const token = c.req.header('Authorization')?.replace('Bearer ', '');
   
   if (!token) {
-    return c.json({ error: 'No token provided' }, 401);
+    return c.json({ error: 'トークンが提供されていません' }, 401);
   }
   
   try {
@@ -572,18 +572,18 @@ export const auth = createMiddleware(async (c, next) => {
     c.set('userId', payload.userId);
     await next();
   } catch (error) {
-    return c.json({ error: 'Invalid token' }, 401);
+    return c.json({ error: '無効なトークンです' }, 401);
   }
 });
 
-// Usage in routes
+// ルートでの使用
 .get('/profile', auth, async (c) => {
   const userId = c.get('userId');
-  // Use userId in handler
+  // ハンドラーでuserIdを使用
 })
 ```
 
-### Validation Middleware
+### バリデーションミドルウェア
 
 ```typescript
 // src/middleware/validate.ts
@@ -599,31 +599,31 @@ export function validate<T>(schema: z.Schema<T>) {
     } catch (error) {
       if (error instanceof z.ZodError) {
         return c.json({ 
-          error: 'Validation failed',
+          error: 'バリデーションが失敗しました',
           details: error.errors,
         }, 400);
       }
-      return c.json({ error: 'Invalid request body' }, 400);
+      return c.json({ error: '無効なリクエストボディです' }, 400);
     }
   });
 }
 
-// Define schema
+// スキーマ定義
 const createUserSchema = z.object({
   email: z.string().email(),
   name: z.string().min(2),
 });
 
-// Use in route
+// ルートでの使用
 .post('/', validate(createUserSchema), async (c) => {
   const body = c.get('validatedBody');
-  // Body is now typed and validated
+  // bodyは型付けされバリデーション済み
 })
 ```
 
-## Common Patterns
+## 共通パターン
 
-### Pagination
+### ページネーション
 
 ```typescript
 // src/features/user/api/routes.ts
@@ -650,7 +650,7 @@ const createUserSchema = z.object({
 })
 ```
 
-### File Upload
+### ファイルアップロード
 
 ```typescript
 // src/features/upload/api/routes.ts
@@ -659,31 +659,31 @@ const createUserSchema = z.object({
   const file = body.file as File;
   
   if (!file) {
-    return c.json({ error: 'No file provided' }, 400);
+    return c.json({ error: 'ファイルが提供されていません' }, 400);
   }
   
-  // Validate file type
+  // ファイルタイプのバリデーション
   const allowedTypes = ['image/jpeg', 'image/png', 'image/webp'];
   if (!allowedTypes.includes(file.type)) {
-    return c.json({ error: 'Invalid file type' }, 400);
+    return c.json({ error: '無効なファイルタイプです' }, 400);
   }
   
-  // Save file
+  // ファイル保存
   const buffer = await file.arrayBuffer();
   const filename = `${crypto.randomUUID()}-${file.name}`;
   
-  // Save to disk or cloud storage
+  // ディスクまたはクラウドストレージに保存
   const result = await saveFile(filename, Buffer.from(buffer));
   
   if (isErr(result)) {
-    return c.json({ error: 'Failed to save file' }, 500);
+    return c.json({ error: 'ファイルの保存に失敗しました' }, 500);
   }
   
   return c.json({ filename, url: result.data.url }, 201);
 })
 ```
 
-### Background Jobs
+### バックグラウンドジョブ
 
 ```typescript
 // src/features/email/commands/send-welcome-email.ts
@@ -693,7 +693,7 @@ export const sendWelcomeEmail = depend(
     jobQueue: {} as JobQueue,
   },
   async ({ emailService, jobQueue }, userId: string) => {
-    // Queue job instead of sending immediately
+    // 即座に送信する代わりにジョブをキューに追加
     return jobQueue.add('send-welcome-email', {
       userId,
       template: 'welcome',
@@ -702,23 +702,23 @@ export const sendWelcomeEmail = depend(
   }
 );
 
-// In user creation command
+// ユーザー作成コマンドで
 const emailResult = await sendWelcomeEmail()(user.id);
-// Don't fail user creation if email fails
+// メール送信に失敗してもユーザー作成は失敗させない
 if (isErr(emailResult)) {
-  console.error('Failed to queue welcome email:', emailResult.error);
+  console.error('ウェルカムメールのキューイングに失敗:', emailResult.error);
 }
 ```
 
-## Performance Tips
+## パフォーマンスのコツ
 
-1. **Use Database Indexes**
+1. **データベースインデックスを使用**
    ```sql
    CREATE INDEX idx_users_email ON users(email);
    CREATE INDEX idx_products_category ON products(category);
    ```
 
-2. **Implement Caching**
+2. **キャッシュの実装**
    ```typescript
    const cache = new Map<string, CachedItem>();
    
@@ -732,7 +732,7 @@ if (isErr(emailResult)) {
      if (isOk(result) && result.data) {
        cache.set(`user:${id}`, {
          data: result.data,
-         expiresAt: Date.now() + 60000, // 1 minute
+         expiresAt: Date.now() + 60000, // 1分
        });
      }
      
@@ -740,7 +740,7 @@ if (isErr(emailResult)) {
    }
    ```
 
-3. **Use Connection Pooling (for PostgreSQL)**
+3. **接続プーリングの使用（PostgreSQL用）**
    ```typescript
    import { Pool } from 'pg';
    
@@ -750,12 +750,12 @@ if (isErr(emailResult)) {
    });
    ```
 
-4. **Optimize Queries**
-   - Select only needed columns
-   - Use joins instead of multiple queries
-   - Batch operations when possible
+4. **クエリの最適化**
+   - 必要な列のみを選択
+   - 複数クエリの代わりにJOINを使用
+   - 可能な限りバッチ操作を行う
 
-5. **Enable Response Compression**
+5. **レスポンス圧縮の有効化**
    ```typescript
    import { compress } from 'hono/compress';
    

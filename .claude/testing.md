@@ -1,66 +1,66 @@
-# 🧪 Testing Guide
+# 🧪 テストガイド
 
-Comprehensive guide to Test-Driven Development (TDD) in this project.
+このプロジェクトにおけるテスト駆動開発（TDD）の包括的ガイド。
 
-## TDD Workflow
+## TDDワークフロー
 
-### The Red-Green-Refactor Cycle
+### Red-Green-Refactorサイクル
 
-1. **🔴 Red**: Write a failing test first
-2. **🟢 Green**: Write minimal code to pass the test
-3. **🔵 Refactor**: Improve code while keeping tests green
+1. **🔴 Red**：最初に失敗するテストを書く
+2. **🟢 Green**：テストを通すための最小限のコードを書く
+3. **🔵 Refactor**：テストを緑に保ちながらコードを改善する
 
 ```bash
-# Watch mode for TDD
+# TDD用ウォッチモード
 yarn test --watch
 
-# Run specific test file
+# 特定のテストファイルを実行
 yarn test user.spec
 
-# Run with coverage
+# カバレッジ付きで実行
 yarn test --coverage
 ```
 
-## Test File Organization
+## テストファイル組織化
 
-### Naming Convention
+### 命名規則
 
 ```
-feature.ts          # Implementation
-feature.spec.ts     # Test file (same directory)
+feature.ts          # 実装
+feature.spec.ts     # テストファイル（同じディレクトリ）
 ```
 
-### Test Structure
+### テスト構造
 
 ```typescript
 import { describe, it, expect, beforeEach, vi } from 'vitest';
 
-describe('Feature Name', () => {
-  // Setup
+describe('機能名', () => {
+  // セットアップ
   beforeEach(() => {
-    // Reset mocks, initialize test data
+    // モックのリセット、テストデータの初期化
   });
 
-  describe('specific functionality', () => {
-    it('should do something specific', () => {
-      // Arrange
-      const input = { /* test data */ };
+  describe('特定の機能', () => {
+    it('特定のことを行うべき', () => {
+      // Arrange（準備）
+      const input = { /* テストデータ */ };
       
-      // Act
+      // Act（実行）
       const result = functionUnderTest(input);
       
-      // Assert
+      // Assert（検証）
       expect(result).toEqual(expected);
     });
   });
 });
 ```
 
-## Testing Patterns by Layer
+## レイヤー別テストパターン
 
-### 1. Testing Commands (Business Logic)
+### 1. コマンドのテスト（ビジネスロジック）
 
-Commands contain validation and business rules:
+コマンドにはバリデーションとビジネスルールが含まれます：
 
 ```typescript
 // create-user.spec.ts
@@ -74,7 +74,7 @@ describe('createUser command', () => {
   let createUserCmd: ReturnType<typeof createUser.inject>;
 
   beforeEach(() => {
-    // Create mock repository
+    // モックリポジトリの作成
     mockUserRepository = {
       create: vi.fn(),
       findAll: vi.fn(),
@@ -83,13 +83,13 @@ describe('createUser command', () => {
       delete: vi.fn(),
     };
     
-    // Inject mock
+    // モックの注入
     createUserCmd = createUser.inject({ userRepository: mockUserRepository });
   });
 
-  it('should create user with valid email', async () => {
+  it('有効なメールでユーザーを作成すべき', async () => {
     // Arrange
-    const input = { email: 'test@example.com', name: 'Test User' };
+    const input = { email: 'test@example.com', name: 'テストユーザー' };
     const expectedUser = {
       id: '123',
       ...input,
@@ -109,9 +109,9 @@ describe('createUser command', () => {
     expect(mockUserRepository.create).toHaveBeenCalledWith(input);
   });
 
-  it('should reject invalid email', async () => {
+  it('無効なメールを拒否すべき', async () => {
     // Arrange
-    const input = { email: 'invalid-email', name: 'Test User' };
+    const input = { email: 'invalid-email', name: 'テストユーザー' };
 
     // Act
     const result = await createUserCmd()(input);
@@ -119,25 +119,25 @@ describe('createUser command', () => {
     // Assert
     expect(result.success).toBe(false);
     if (!result.success) {
-      expect(result.error.message).toBe('Invalid email format');
+      expect(result.error.message).toBe('メールアドレスの形式が無効です');
     }
     expect(mockUserRepository.create).not.toHaveBeenCalled();
   });
 });
 ```
 
-### 2. Testing Queries (Data Retrieval)
+### 2. クエリのテスト（データ取得）
 
-Queries should be simple and test error propagation:
+クエリはシンプルであり、エラー伝播をテストします：
 
 ```typescript
 // get-users.spec.ts
 describe('getUsers query', () => {
-  it('should return all users', async () => {
+  it('すべてのユーザーを返すべき', async () => {
     // Arrange
     const expectedUsers = [
-      { id: '1', email: 'user1@example.com', name: 'User 1' },
-      { id: '2', email: 'user2@example.com', name: 'User 2' },
+      { id: '1', email: 'user1@example.com', name: 'ユーザー1' },
+      { id: '2', email: 'user2@example.com', name: 'ユーザー2' },
     ];
     vi.mocked(mockUserRepository.findAll).mockResolvedValue(ok(expectedUsers));
 
@@ -151,9 +151,9 @@ describe('getUsers query', () => {
     }
   });
 
-  it('should propagate repository errors', async () => {
+  it('リポジトリエラーを伝播すべき', async () => {
     // Arrange
-    const error = new Error('Database connection failed');
+    const error = new Error('データベース接続に失敗しました');
     vi.mocked(mockUserRepository.findAll).mockResolvedValue(err(error));
 
     // Act
@@ -168,9 +168,9 @@ describe('getUsers query', () => {
 });
 ```
 
-### 3. Testing Repositories (Data Access)
+### 3. リポジトリのテスト（データアクセス）
 
-Use MockDbAdapter for database interaction tests:
+データベースインタラクションテストにはMockDbAdapterを使用：
 
 ```typescript
 // user-repository-impl.spec.ts
@@ -187,13 +187,13 @@ describe('UserRepository implementation', () => {
   });
 
   describe('findAll', () => {
-    it('should return all users', async () => {
+    it('すべてのユーザーを返すべき', async () => {
       // Arrange
       const dbRows = [
         {
           id: '1',
           email: 'user@example.com',
-          name: 'Test User',
+          name: 'テストユーザー',
           created_at: '2024-01-01T00:00:00Z',
           updated_at: '2024-01-01T00:00:00Z',
         },
@@ -212,9 +212,9 @@ describe('UserRepository implementation', () => {
       }
     });
 
-    it('should handle database errors', async () => {
+    it('データベースエラーを処理すべき', async () => {
       // Arrange
-      mockDb.mockFailure('Connection timeout');
+      mockDb.mockFailure('接続タイムアウト');
 
       // Act
       const result = await userRepo().findAll();
@@ -222,16 +222,16 @@ describe('UserRepository implementation', () => {
       // Assert
       expect(result.success).toBe(false);
       if (!result.success) {
-        expect(result.error.message).toBe('Connection timeout');
+        expect(result.error.message).toBe('接続タイムアウト');
       }
     });
   });
 });
 ```
 
-### 4. Testing API Routes (HTTP Layer)
+### 4. APIルートのテスト（HTTP層）
 
-Test the full HTTP request/response cycle:
+フルHTTPリクエスト/レスポンスサイクルをテスト：
 
 ```typescript
 // routes.spec.ts
@@ -251,10 +251,10 @@ describe('User API Routes', () => {
   });
 
   describe('GET /', () => {
-    it('should return users list', async () => {
+    it('ユーザーリストを返すべき', async () => {
       // Arrange
       mockDb.setData('users', [
-        { id: '1', email: 'test@example.com', name: 'Test' },
+        { id: '1', email: 'test@example.com', name: 'テスト' },
       ]);
 
       // Act
@@ -268,14 +268,14 @@ describe('User API Routes', () => {
   });
 
   describe('POST /', () => {
-    it('should create user', async () => {
+    it('ユーザーを作成すべき', async () => {
       // Act
       const res = await app.request('/', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
           email: 'new@example.com',
-          name: 'New User',
+          name: '新しいユーザー',
         }),
       });
 
@@ -285,7 +285,7 @@ describe('User API Routes', () => {
       expect(body.user.email).toBe('new@example.com');
     });
 
-    it('should handle invalid JSON', async () => {
+    it('無効なJSONを処理すべき', async () => {
       // Act
       const res = await app.request('/', {
         method: 'POST',
@@ -302,71 +302,71 @@ describe('User API Routes', () => {
 });
 ```
 
-## Testing Railway Results
+## Railway Resultのテスト
 
-### Success Cases
+### 成功ケース
 
 ```typescript
-// Always check success flag first
+// 常に最初にsuccessフラグをチェック
 expect(result.success).toBe(true);
 if (result.success) {
   expect(result.data).toEqual(expectedData);
 }
 ```
 
-### Error Cases
+### エラーケース
 
 ```typescript
-// Use isErr for error checks
+// エラーチェックにはisErrを使用
 import { isErr } from '@fyuuki0jp/railway-result';
 
 expect(isErr(result)).toBe(true);
 if (isErr(result)) {
-  expect(result.error.message).toBe('Expected error message');
+  expect(result.error.message).toBe('期待されるエラーメッセージ');
 }
 ```
 
-## Mock Utilities
+## モックユーティリティ
 
 ### MockDbAdapter
 
-A test double for database operations:
+データベース操作用のテストダブル：
 
 ```typescript
 const mockDb = new MockDbAdapter();
 
-// Set test data
+// テストデータの設定
 mockDb.setData('users', [
-  { id: '1', email: 'test@example.com', name: 'Test' }
+  { id: '1', email: 'test@example.com', name: 'テスト' }
 ]);
 
-// Simulate failures
-mockDb.mockFailure('Database error');
+// 失敗のシミュレート
+mockDb.mockFailure('データベースエラー');
 
-// Reset between tests
+// テスト間でのリセット
 mockDb.reset();
 ```
 
-### Vitest Mocking
+### Vitestモッキング
 
 ```typescript
-// Mock functions
+// 関数のモック
 const mockFn = vi.fn();
 mockFn.mockResolvedValue(ok(data));
-mockFn.mockResolvedValue(err(new Error('Failed')));
+mockFn.mockResolvedValue(err(new Error('失敗')));
 
-// Mock modules
+// モジュールのモック
 vi.mock('./module', () => ({
   someFunction: vi.fn(),
 }));
 
-// Spy on existing functions
+// 既存関数のスパイ
 const spy = vi.spyOn(object, 'method');
 ```
 
-## Test Data Builders
+## テストデータビルダー
 
-Create reusable test data:
+再利用可能なテストデータの作成：
 
 ```typescript
 // test-builders.ts
@@ -374,58 +374,58 @@ export function buildUser(overrides?: Partial<User>): User {
   return {
     id: '123',
     email: 'test@example.com',
-    name: 'Test User',
+    name: 'テストユーザー',
     createdAt: new Date('2024-01-01'),
     updatedAt: new Date('2024-01-01'),
     ...overrides,
   };
 }
 
-// Usage in tests
-const user = buildUser({ name: 'Custom Name' });
+// テストでの使用
+const user = buildUser({ name: 'カスタム名' });
 ```
 
-## Coverage Requirements
+## カバレッジ要件
 
-### Minimum Coverage
+### 最小カバレッジ
 
-- Commands: 100% (all validation paths)
-- Queries: 100% (success and error paths)
-- Repositories: 90% (data transformations)
-- Routes: 90% (HTTP handling)
+- コマンド：100%（すべてのバリデーションパス）
+- クエリ：100%（成功およびエラーパス）
+- リポジトリ：90%（データ変換）
+- ルート：90%（HTTP処理）
 
-### What to Test
+### テストすべきもの
 
-✅ **Test These:**
-- Business logic and validation
-- Error handling paths
-- Data transformations
-- HTTP status codes
-- Edge cases
+✅ **これらをテスト：**
+- ビジネスロジックとバリデーション
+- エラーハンドリングパス
+- データ変換
+- HTTPステータスコード
+- エッジケース
 
-❌ **Don't Test These:**
-- Framework internals
-- Third-party libraries
-- Simple getters/setters
-- Type definitions
+❌ **これらはテストしない：**
+- フレームワーク内部
+- サードパーティライブラリ
+- シンプルなゲッター/セッター
+- 型定義
 
-## Common Testing Patterns
+## 共通テストパターン
 
-### Testing Async Operations
+### 非同期操作のテスト
 
 ```typescript
-it('should handle async operations', async () => {
-  // Always use async/await for clarity
+it('非同期操作を処理すべき', async () => {
+  // 明確性のため常にasync/awaitを使用
   const result = await asyncFunction();
   expect(result).toBeDefined();
 });
 ```
 
-### Testing Time-Dependent Code
+### 時間依存コードのテスト
 
 ```typescript
 beforeEach(() => {
-  // Fix time for consistent tests
+  // 一貫したテストのため時間を固定
   vi.useFakeTimers();
   vi.setSystemTime(new Date('2024-01-01'));
 });
@@ -435,15 +435,15 @@ afterEach(() => {
 });
 ```
 
-### Testing Error Scenarios
+### エラーシナリオのテスト
 
 ```typescript
-it('should handle specific errors', async () => {
-  // Test different error types
+it('特定のエラーを処理すべき', async () => {
+  // 異なるエラータイプをテスト
   const errors = [
-    'Network error',
-    'Validation failed',
-    'Unauthorized',
+    'ネットワークエラー',
+    'バリデーション失敗',
+    '認証エラー',
   ];
 
   for (const errorMsg of errors) {
@@ -454,54 +454,54 @@ it('should handle specific errors', async () => {
 });
 ```
 
-## Debugging Tests
+## テストのデバッグ
 
-### Console Output
+### コンソール出力
 
 ```typescript
-// Temporarily add console.log for debugging
-console.log('Result:', JSON.stringify(result, null, 2));
+// デバッグ用に一時的にconsole.logを追加
+console.log('結果:', JSON.stringify(result, null, 2));
 
-// Use debug mode
+// デバッグモードを使用
 DEBUG=* yarn test
 ```
 
-### VS Code Debugging
+### VS Codeデバッグ
 
-1. Add breakpoint in test
-2. Run "Debug Test" from VS Code
-3. Step through code
+1. テストにブレークポイントを追加
+2. VS Codeから「Debug Test」を実行
+3. コードをステップ実行
 
-### Common Issues
+### よくある問題
 
-1. **Async Issues**: Always await async operations
-2. **Mock Not Working**: Check mock is properly injected
-3. **Flaky Tests**: Look for time dependencies or shared state
-4. **Type Errors**: Ensure mocks match interfaces
+1. **非同期の問題**：非同期操作は常にawaitする
+2. **モックが動作しない**：モックが適切に注入されているかチェック
+3. **不安定なテスト**：時間依存や共有状態を確認
+4. **型エラー**：モックがインターフェースと一致することを確認
 
-## Best Practices
+## ベストプラクティス
 
-1. **Test Behavior, Not Implementation**
-   - Focus on what the code does, not how
-   - Tests should survive refactoring
+1. **実装ではなく動作をテスト**
+   - コードがどのように動作するかではなく、何をするかに焦点を当てる
+   - テストはリファクタリングに耐えるべき
 
-2. **Use Descriptive Test Names**
+2. **説明的なテスト名を使用**
    ```typescript
-   // ✅ Good
-   it('should reject email without @ symbol')
+   // ✅ 良い例
+   it('@記号のないメールを拒否すべき')
    
-   // ❌ Bad
-   it('should validate input')
+   // ❌ 悪い例
+   it('入力をバリデーションすべき')
    ```
 
-3. **One Assertion Per Test**
-   - Makes failures clear
-   - Easier to fix broken tests
+3. **テストごとに1つのアサーション**
+   - 失敗を明確にする
+   - 壊れたテストの修正が簡単
 
-4. **Isolate Tests**
-   - No shared state between tests
-   - Each test should be independent
+4. **テストを分離**
+   - テスト間で状態を共有しない
+   - 各テストは独立している必要がある
 
-5. **Fast Tests**
-   - Mock external dependencies
-   - Use in-memory database for tests
+5. **高速テスト**
+   - 外部依存関係をモック
+   - テスト用にインメモリデータベースを使用

@@ -1,49 +1,73 @@
-# CLAUDE.md
+# プロジェクト開発ガイド
 
-This file provides guidance to Claude Code (claude.ai/code) when working with code in this repository.
+このファイルは、Claude Code（claude.ai/code）がこのリポジトリで作業を行う際のガイダンスを提供します。
 
-## Project Overview
+## プロジェクト概要
 
-Hono server with Feature Sliced Design, CQRS, Railway Result types, and Velona DI.
+Feature Sliced Design（FSD）、CQRS、Railway Result型、Velona DIを採用したフルスタックモノレポ。
+- **バックエンド**: HonoサーバーでCQRS + Railway Result + Velona DI
+- **フロントエンド**: React + Vite + TanStack Query + FSD
 
-## Directory Structure
+## モノレポ構造
 
 ```
-src/
-├── app/              # App config & providers
-├── features/         # Feature modules
-│   └── [feature]/
-│       ├── commands/ # Write operations
-│       ├── queries/  # Read operations
-│       ├── domain/   # Business logic
-│       └── api/      # HTTP endpoints
-├── shared/
-│   └── adapters/
-│       ├── db/       # DB adapters (SQLite/Prisma/Drizzle)
-│       └── external/ # External services
-└── entities/         # Shared business entities
+/
+├── backend/          # Honoサーバー（FSD + CQRS）
+│   └── src/
+│       ├── features/         # 機能モジュール
+│       │   └── [feature]/
+│       │       ├── commands/ # 書き込み操作（Railway Result）
+│       │       ├── queries/  # 読み込み操作
+│       │       ├── domain/   # ビジネスロジック + Repository
+│       │       └── api/      # HTTPエンドポイント（Hono）
+│       ├── shared/
+│       │   └── adapters/
+│       │       ├── db/       # データベースアダプター
+│       │       └── external/ # 外部サービス
+│       ├── entities/         # 共有ビジネスエンティティ
+│       └── server.ts         # Honoアプリケーション
+└── frontend/         # Reactアプリ（FSD）
+    └── src/
+        ├── app/              # アプリケーション初期化
+        │   └── providers/    # グローバルプロバイダー
+        ├── features/         # 機能モジュール
+        │   └── [feature]/
+        │       ├── api/      # APIフック（TanStack Query）
+        │       ├── ui/       # UIコンポーネント
+        │       └── model/    # ローカル状態管理（オプション）
+        ├── shared/
+        │   ├── ui/           # 再利用可能UIコンポーネント
+        │   ├── lib/          # 共通ライブラリ（API client等）
+        │   └── types/        # 共有型定義
+        ├── widgets/          # 複合ウィジェット
+        └── pages/            # ページコンポーネント
 ```
 
-## Commands
+## 基本コマンド
 
 ```bash
-yarn dev          # Start dev server (http://localhost:3001)
-yarn build        # Build project
-yarn test         # Run tests
-yarn lint         # Run ESLint
-yarn typecheck    # TypeScript type check
+# モノレポ全体
+yarn dev          # 両サーバー同時起動（backend:3000, frontend:5173）
+yarn build        # 全プロジェクトビルド
+yarn test         # 全テスト実行
+yarn lint         # 全ESLint実行
+yarn typecheck    # 全TypeScript型チェック
+
+# 個別実行
+yarn workspace @spa-hono/backend dev    # バックエンドのみ
+yarn workspace @spa-hono/frontend dev   # フロントエンドのみ
 ```
 
-## Implementation Approach
+## 実装アプローチ
 
-### 1. Railway-Oriented Programming (ROP)
+### 1. Railway-Oriented Programming（ROP）
 
-Every function returns `Result<T, E>` for consistent error handling:
+すべての関数は一貫したエラーハンドリングのため`Result<T, E>`を返します：
 
 ```typescript
 import { Result, ok, err, isErr } from '@fyuuki0jp/railway-result';
 
-// All functions follow this pattern
+// すべての関数はこのパターンに従います
 async function operation(): Promise<Result<Data, Error>> {
   const result = await dependency.method();
   if (isErr(result)) return result;
@@ -52,24 +76,24 @@ async function operation(): Promise<Result<Data, Error>> {
 }
 ```
 
-### 2. Feature-Sliced Design (FSD)
+### 2. Feature-Sliced Design（FSD）
 
-Each feature is self-contained with clear boundaries:
-- **api/routes.ts** - HTTP endpoints that orchestrate use cases
-- **commands/** - Write operations with business validation
-- **queries/** - Read operations (simple data fetching)
-- **domain/** - Repository interfaces and implementations
+各機能は明確な境界を持つ自己完結型です：
+- **api/routes.ts** - ユースケースを調整するHTTPエンドポイント
+- **commands/** - ビジネス検証を含む書き込み操作
+- **queries/** - 読み込み操作（シンプルなデータ取得）
+- **domain/** - リポジトリインターフェースと実装
 
-### 3. CQRS Pattern
+### 3. CQRSパターン
 
-Commands and queries are separated:
+コマンドとクエリは分離されています：
 
 ```typescript
-// Command with validation
+// バリデーション付きコマンド
 export const createUser = depend(
   { userRepo },
   async ({ userRepo }, input) => {
-    // Validate email format
+    // メール形式のバリデーション
     if (!input.email.includes('@')) {
       return err(new Error('Invalid email'));
     }
@@ -77,16 +101,16 @@ export const createUser = depend(
   }
 );
 
-// Query (no business logic)
+// クエリ（ビジネスロジックなし）
 export const getUsers = depend(
   { userRepo },
   async ({ userRepo }) => userRepo.findAll()
 );
 ```
 
-### 4. Dependency Injection with Velona
+### 4. Velonaによる依存性注入
 
-Manual injection at the route level:
+ルートレベルでの手動注入：
 
 ```typescript
 export default function createUserRoutes(db: DbAdapter) {
@@ -95,14 +119,14 @@ export default function createUserRoutes(db: DbAdapter) {
   const getUsersQuery = getUsers.inject({ userRepo });
   
   const router = new Hono();
-  // Route handlers use injected dependencies
+  // ルートハンドラーは注入された依存性を使用
   return router;
 }
 ```
 
-### 5. Adapter Pattern
+### 5. アダプターパターン
 
-Database operations are abstracted:
+データベース操作は抽象化されています：
 
 ```typescript
 interface DbAdapter {
@@ -112,9 +136,9 @@ interface DbAdapter {
 }
 ```
 
-### 6. Entity Management
+### 6. エンティティ管理
 
-All entities extend base interface:
+すべてのエンティティは基底インターフェースを拡張します：
 
 ```typescript
 interface Entity {
@@ -129,10 +153,10 @@ interface User extends Entity {
 }
 ```
 
-### 7. Error Handling Flow
+### 7. エラーハンドリングフロー
 
 ```typescript
-// Route handler
+// ルートハンドラー
 const result = await createUserCmd(input);
 if (isErr(result)) {
   return c.json({ error: result.error.message }, 400);
@@ -140,29 +164,29 @@ if (isErr(result)) {
 return c.json(result.data, 201);
 ```
 
-### 8. Hono API Method Chaining
+### 8. Hono APIメソッドチェーン
 
-All Hono routes MUST use method chaining pattern for clean, readable code:
+すべてのHonoルートは、クリーンで読みやすいコードのためメソッドチェーンパターンを**必須**で使用します：
 
 ```typescript
-// ✅ CORRECT: Method chaining
+// ✅ 正しい：メソッドチェーン
 export default (db: DbAdapter) => {
   return new Hono()
     .get('/', async (c) => {
-      // Handler implementation
+      // ハンドラー実装
     })
     .post('/', async (c) => {
-      // Handler implementation
+      // ハンドラー実装
     })
     .put('/:id', async (c) => {
-      // Handler implementation
+      // ハンドラー実装
     })
     .delete('/:id', async (c) => {
-      // Handler implementation
+      // ハンドラー実装
     });
 };
 
-// ❌ WRONG: Separate declarations
+// ❌ 間違い：個別宣言
 export default (db: DbAdapter) => {
   const router = new Hono();
   router.get('/', handler);
@@ -171,9 +195,9 @@ export default (db: DbAdapter) => {
 };
 ```
 
-### 9. Route Implementation Best Practices
+### 9. ルート実装のベストプラクティス
 
-#### Route File Structure (api/routes.ts)
+#### ルートファイル構造（api/routes.ts）
 
 ```typescript
 import { Hono } from 'hono';
@@ -186,23 +210,23 @@ import type { DbAdapter } from '../../../shared/adapters/db';
 export default (db: DbAdapter) => {
   return new Hono()
     .get('/', async (c) => {
-      // 1. Inject dependencies
+      // 1. 依存性注入
       const userRepository = userRepositoryImpl.inject({ db })();
       const getUsersUseCase = getUsers.inject({ userRepository })();
       
-      // 2. Execute use case
+      // 2. ユースケース実行
       const result = await getUsersUseCase();
 
-      // 3. Handle errors with proper status codes
+      // 3. 適切なステータスコードでエラーハンドリング
       if (isErr(result)) {
         return c.json({ error: result.error.message }, 500);
       }
 
-      // 4. Return success response
+      // 4. 成功レスポンス返却
       return c.json({ users: result.data });
     })
     .post('/', async (c) => {
-      // 1. Parse request body with error handling
+      // 1. エラーハンドリング付きリクエストボディ解析
       let body;
       try {
         body = await c.req.json();
@@ -210,25 +234,25 @@ export default (db: DbAdapter) => {
         return c.json({ error: 'Invalid JSON' }, 400);
       }
 
-      // 2. Inject dependencies
+      // 2. 依存性注入
       const userRepository = userRepositoryImpl.inject({ db })();
       const createUserUseCase = createUser.inject({ userRepository })();
 
-      // 3. Execute use case
+      // 3. ユースケース実行
       const result = await createUserUseCase(body);
 
-      // 4. Handle errors with proper status codes
+      // 4. 適切なステータスコードでエラーハンドリング
       if (isErr(result)) {
         const statusCode = determineStatusCode(result.error.message);
         return c.json({ error: result.error.message }, statusCode);
       }
 
-      // 5. Return success response with 201 Created
+      // 5. 201 Createdで成功レスポンス返却
       return c.json({ user: result.data }, 201);
     });
 };
 
-// Helper function for status code determination
+// ステータスコード判定用ヘルパー関数
 function determineStatusCode(errorMessage: string): number {
   if (
     errorMessage.includes('Database') ||
@@ -241,72 +265,275 @@ function determineStatusCode(errorMessage: string): number {
 }
 ```
 
-#### Key Patterns
+#### 主要パターン
 
-1. **Dependency Injection at Route Level**
-   - Inject repositories into use cases inside each handler
-   - This allows for better testability and flexibility
+1. **ルートレベルでの依存性注入**
+   - 各ハンドラー内でリポジトリをユースケースに注入
+   - テスタビリティと柔軟性の向上
 
-2. **Consistent Error Response Format**
+2. **一貫したエラーレスポンス形式**
    ```typescript
    { error: string }
    ```
 
-3. **Consistent Success Response Format**
+3. **一貫した成功レスポンス形式**
    ```typescript
-   // For collections
+   // コレクション用
    { users: User[] }
    
-   // For single entities
+   // 単一エンティティ用
    { user: User }
    ```
 
-4. **Status Code Guidelines**
-   - `200 OK` - Successful GET
-   - `201 Created` - Successful POST
-   - `400 Bad Request` - Validation errors
-   - `500 Internal Server Error` - Database/infrastructure errors
+4. **ステータスコードガイドライン**
+   - `200 OK` - 成功したGET
+   - `201 Created` - 成功したPOST
+   - `400 Bad Request` - バリデーションエラー
+   - `500 Internal Server Error` - データベース/インフラエラー
 
-5. **Request Body Validation**
-   - Always wrap JSON parsing in try-catch
-   - Return 400 with clear error message for invalid JSON
+5. **リクエストボディバリデーション**
+   - JSON解析は常にtry-catchでラップ
+   - 無効なJSONに対しては400と明確なエラーメッセージを返す
 
-6. **Method Chaining Order**
-   - GET routes first (read operations)
-   - POST routes (create operations)
-   - PUT/PATCH routes (update operations)
-   - DELETE routes (delete operations)
+6. **メソッドチェーンの順序**
+   - GET ルート（読み込み操作）を最初に
+   - POST ルート（作成操作）
+   - PUT/PATCH ルート（更新操作）
+   - DELETE ルート（削除操作）
 
-## Key Implementation Details
+## 重要な実装詳細
 
-- **Database**: SQLite with better-sqlite3 (WAL mode enabled)
-- **IDs**: Generated using `crypto.randomUUID()`
-- **Dates**: Stored as ISO strings, converted to Date objects in domain
-- **Validation**: Business rules in commands, not in repositories
-- **Testing**: Use `.inject()` to provide mock dependencies
+- **データベース**: better-sqlite3によるSQLite（WALモード有効）
+- **ID**: `crypto.randomUUID()`を使用して生成
+- **日付**: ISO文字列として保存、ドメインでDateオブジェクトに変換
+- **バリデーション**: リポジトリではなく、コマンドでビジネスルール実装
+- **テスト**: `.inject()`を使用してモック依存性を提供
 
-## Dependencies
+## フロントエンド Feature-Sliced Design
 
-- **Hono** - Web framework
-- **@fyuuki0jp/railway-result** - Result types
-- **velona** - Dependency injection
-- **better-sqlite3** - SQLite driver
-- **tsx** - TypeScript execution
-- **Vite/Vitest** - Build & test
-- **TypeScript** - Strict mode
+### 1. FSD層構造
 
-## Test-Driven Development (TDD)
+FSDは以下の層で構成されます（依存性は上から下のみ）：
 
-### Development Workflow
+```
+app/        → アプリケーション初期化・グローバル設定
+pages/      → ページコンポーネント（ルーティング）
+widgets/    → 独立した複合UI（複数featureを組み合わせ）
+features/   → ビジネス機能（ユーザー管理、注文管理等）
+shared/     → 再利用可能なリソース
+```
 
-1. **Red** - Write a failing test first
-2. **Green** - Write minimal code to make the test pass
-3. **Refactor** - Improve code quality while keeping tests green
+### 2. Features実装パターン
 
-### Test Structure
+各機能は以下の構造を持ちます：
 
 ```typescript
-// Example test for a command
+// features/user-management/api/hooks.ts - APIロジック
+export const useUsers = () => {
+  return useQuery({
+    queryKey: ['users'],
+    queryFn: async () => {
+      const response = await apiClient.api.users.$get();
+      // エラーハンドリング・レスポンス処理
+    },
+  });
+};
+
+export const useCreateUser = () => {
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: async (input: CreateUserInput) => {
+      // API呼び出し
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['users'] });
+    },
+  });
+};
+
+// features/user-management/ui/user-form.tsx - UIコンポーネント
+export const UserForm: FC<UserFormProps> = ({ onSuccess }) => {
+  const { mutate: createUser, isPending, error } = useCreateUser();
+  // フォーム実装
+};
+
+// features/user-management/ui/user-list.tsx - UIコンポーネント
+export const UserList: FC = () => {
+  const { data, isLoading, error } = useUsers();
+  // リスト表示実装
+};
+```
+
+### 3. Shared層のベストプラクティス
+
+#### UI コンポーネント
+```typescript
+// shared/ui/button.tsx - 汎用Button
+interface ButtonProps extends ButtonHTMLAttributes<HTMLButtonElement> {
+  variant?: 'primary' | 'secondary' | 'danger';
+  size?: 'small' | 'medium' | 'large';
+}
+
+// shared/ui/index.ts - バレルエクスポート
+export { Button } from './button';
+export { Card } from './card';
+export { Input } from './input';
+```
+
+#### 共通ライブラリ
+```typescript
+// shared/lib/api-client.ts - 型安全なAPIクライアント
+import { hc } from 'hono/client';
+import type { ApiSchema } from '../../../backend/src/server';
+
+export const apiClient = hc<ApiSchema>('/');
+
+// shared/types/user.ts - 共有型定義
+export interface User {
+  id: string;
+  email: string;
+  name: string;
+  createdAt: string;
+  updatedAt: string;
+}
+```
+
+### 4. Widget層の活用
+
+複数のfeatureを組み合わせた複合コンポーネント：
+
+```typescript
+// widgets/user-management/user-management-widget.tsx
+import { Card } from '@/shared/ui';
+import { UserForm, UserList } from '@/features/user-management';
+
+export const UserManagementWidget: FC = () => {
+  return (
+    <div className="container mx-auto px-4 py-8">
+      <h1 className="text-3xl font-bold mb-8">User Management</h1>
+      <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
+        <div className="lg:col-span-1">
+          <Card>
+            <h2 className="text-xl font-semibold mb-4">Add New User</h2>
+            <UserForm />
+          </Card>
+        </div>
+        <div className="lg:col-span-2">
+          <h2 className="text-xl font-semibold mb-4">Users</h2>
+          <UserList />
+        </div>
+      </div>
+    </div>
+  );
+};
+```
+
+### 5. App層の責務
+
+```typescript
+// app/providers/query-client-provider.tsx
+const queryClient = new QueryClient({
+  defaultOptions: {
+    queries: { retry: 1, staleTime: 5 * 1000 },
+  },
+});
+
+export const AppQueryClientProvider: FC<AppQueryClientProviderProps> = ({
+  children,
+}) => {
+  return (
+    <QueryClientProvider client={queryClient}>{children}</QueryClientProvider>
+  );
+};
+
+// main.tsx - アプリケーション初期化
+import { AppQueryClientProvider } from './app/providers';
+
+createRoot(document.getElementById('root')!).render(
+  <AppQueryClientProvider>
+    <Routes />
+  </AppQueryClientProvider>
+);
+```
+
+### 6. Import規則
+
+FSDでは以下のimport規則を厳守：
+
+```typescript
+// ✅ 正しい：階層に従った依存性
+import { Button } from '@/shared/ui';                    // shared使用OK
+import { useUsers } from '@/features/user-management';   // 同一・下位層OK
+
+// ❌ 間違い：上位層への依存
+import { UserWidget } from '@/widgets/user-management';  // featureからwidget
+import { HomePage } from '@/pages/home';                 // featureからpage
+```
+
+### 7. TanStack Query統合
+
+```typescript
+// features内でのAPIフック実装
+export const useUsers = () => {
+  return useQuery({
+    queryKey: ['users'],
+    queryFn: async () => {
+      const response = await apiClient.api.users.$get();
+      if (!response.ok) {
+        const errorData = await response.json();
+        if ('error' in errorData) {
+          throw new Error(errorData.error);
+        }
+        throw new Error('Failed to fetch users');
+      }
+      const data = await response.json();
+      if ('users' in data) {
+        return data;
+      }
+      throw new Error('Invalid response format');
+    },
+  });
+};
+
+// UIコンポーネントでの使用
+const { data, isLoading, error } = useUsers();
+```
+
+## 依存関係
+
+### バックエンド
+- **Hono** - Webフレームワーク
+- **@fyuuki0jp/railway-result** - Result型
+- **velona** - 依存性注入
+- **better-sqlite3** - SQLiteドライバー
+- **tsx** - TypeScript実行
+- **Vitest** - テストフレームワーク
+
+### フロントエンド
+- **React** - UIライブラリ
+- **Vite** - ビルドツール
+- **@tanstack/react-query** - サーバー状態管理
+- **@generouted/react-router** - ファイルベースルーティング
+- **hono/client** - 型安全APIクライアント
+- **Tailwind CSS** - CSSフレームワーク
+
+### 共通
+- **TypeScript** - Strictモード
+- **ESLint** - リンター
+- **Prettier** - コードフォーマッター
+
+## テスト駆動開発（TDD）
+
+### 開発ワークフロー
+
+1. **Red** - 最初に失敗するテストを書く
+2. **Green** - テストを通す最小限のコードを書く
+3. **Refactor** - テストを緑のままでコード品質を改善
+
+### テスト構造
+
+```typescript
+// コマンドのテスト例
 describe('createUser command', () => {
   let mockUserRepo: UserRepository;
   let createUserCmd: ReturnType<typeof createUser.inject>;
@@ -320,7 +547,7 @@ describe('createUser command', () => {
     createUserCmd = createUser.inject({ userRepository: mockUserRepo });
   });
 
-  it('should create a user with valid input', async () => {
+  it('有効な入力でユーザーを作成できること', async () => {
     // Arrange
     const input = { email: 'test@example.com', name: 'Test User' };
     const expected = { id: '123', ...input, createdAt: new Date(), updatedAt: new Date() };
@@ -339,40 +566,40 @@ describe('createUser command', () => {
 });
 ```
 
-### Testing Guidelines
+### テストガイドライン
 
-1. **File Naming**: Use `.spec.ts` suffix for test files
-2. **Test Location**: Place tests next to the code they test
-3. **Mock Strategy**: 
-   - Use `vi.fn()` for simple mocks
-   - Use `MockDbAdapter` for database layer testing
-   - Inject mocks using `.inject()` method from Velona
-4. **Test Categories**:
-   - **Commands**: Test business validation and error handling
-   - **Queries**: Test data retrieval and error propagation
-   - **Repositories**: Test database operations and data transformation
-   - **Routes**: Test HTTP layer integration
+1. **ファイル命名**: テストファイルには`.spec.ts`サフィックスを使用
+2. **テストの場所**: テスト対象のコードの隣にテストを配置
+3. **モック戦略**: 
+   - シンプルなモックには`vi.fn()`を使用
+   - データベース層のテストには`MockDbAdapter`を使用
+   - Velonaの`.inject()`メソッドを使用してモックを注入
+4. **テストカテゴリ**:
+   - **Commands**: ビジネスバリデーションとエラーハンドリングをテスト
+   - **Queries**: データ取得とエラー伝播をテスト
+   - **Repositories**: データベース操作とデータ変換をテスト
+   - **Routes**: HTTP層の統合をテスト
 
-### Test Patterns
+### テストパターン
 
-#### Testing Railway Results
+#### Railway Resultのテスト
 ```typescript
-// Success case
+// 成功ケース
 expect(result.success).toBe(true);
 if (result.success) {
   expect(result.data).toEqual(expectedData);
 }
 
-// Error case
+// エラーケース
 expect(isErr(result)).toBe(true);
 if (isErr(result)) {
   expect(result.error.message).toBe('Expected error message');
 }
 ```
 
-#### Testing Commands with Validation
+#### バリデーション付きコマンドのテスト
 ```typescript
-it('should validate email format', async () => {
+it('メール形式をバリデーションすること', async () => {
   const result = await createUserCmd()({ email: 'invalid', name: 'User' });
   
   expect(isErr(result)).toBe(true);
@@ -383,9 +610,9 @@ it('should validate email format', async () => {
 });
 ```
 
-#### Testing Repository Implementation
+#### リポジトリ実装のテスト
 ```typescript
-it('should transform database row to User entity', async () => {
+it('データベース行をUserエンティティに変換すること', async () => {
   const dbRow = {
     id: '123',
     email: 'test@example.com',
@@ -405,21 +632,21 @@ it('should transform database row to User entity', async () => {
 });
 ```
 
-### Mock Implementations
+### モック実装
 
-#### MockDbAdapter Usage
+#### MockDbAdapterの使用
 ```typescript
 const mockDb = new MockDbAdapter();
 const userRepo = userRepositoryImpl.inject({ db: mockDb })();
 
-// Setup test data
+// テストデータの設定
 mockDb.setData('users', [{ id: '1', email: 'test@example.com', name: 'Test' }]);
 
-// Simulate database errors
+// データベースエラーのシミュレート
 mockDb.mockFailure('Database connection failed');
 ```
 
-#### Repository Mock
+#### リポジトリモック
 ```typescript
 const mockUserRepo: UserRepository = {
   create: vi.fn(),
@@ -428,14 +655,14 @@ const mockUserRepo: UserRepository = {
 };
 ```
 
-### Coverage Requirements
+### カバレッジ要件
 
-- All commands must test validation logic
-- All queries must test error propagation
-- All repositories must test data transformation
-- All routes must test HTTP status codes and response format
+- すべてのコマンドはバリデーションロジックをテストする必要がある
+- すべてのクエリはエラー伝播をテストする必要がある
+- すべてのリポジトリはデータ変換をテストする必要がある
+- すべてのルートはHTTPステータスコードとレスポンス形式をテストする必要がある
 
-### Route Testing Best Practices
+### ルートテストのベストプラクティス
 
 ```typescript
 import { describe, it, expect, beforeEach } from 'vitest';
@@ -455,7 +682,7 @@ describe('User API Routes', () => {
   });
 
   describe('GET /', () => {
-    it('should return all users', async () => {
+    it('すべてのユーザーを返すこと', async () => {
       mockDb.setData('users', [
         { id: '1', email: 'user@example.com', name: 'User' }
       ]);
@@ -467,7 +694,7 @@ describe('User API Routes', () => {
       expect(data.users).toHaveLength(1);
     });
 
-    it('should handle database errors', async () => {
+    it('データベースエラーをハンドリングすること', async () => {
       mockDb.mockFailure('Database error');
       
       const res = await app.request('/');
@@ -479,7 +706,7 @@ describe('User API Routes', () => {
   });
 
   describe('POST /', () => {
-    it('should create user with valid data', async () => {
+    it('有効なデータでユーザーを作成すること', async () => {
       const res = await app.request('/', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
@@ -491,7 +718,7 @@ describe('User API Routes', () => {
       expect(data.user.email).toBe('test@example.com');
     });
 
-    it('should handle invalid JSON', async () => {
+    it('無効なJSONをハンドリングすること', async () => {
       const res = await app.request('/', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
@@ -506,12 +733,136 @@ describe('User API Routes', () => {
 });
 ```
 
-## Important Notes
+## 重要な注意事項
 
-1. All functions must return `Result<T, E>` (enforced by ESLint)
-2. Use Context7 MCP for library docs: `mcp__context7__resolve-library-id` → `mcp__context7__get-library-docs`
-3. Test with `.inject()` for mock dependencies
-4. Never throw exceptions - always return `err(new Error(...))`
-5. Keep business logic in commands/queries, not in routes or repositories
-6. **TDD First**: Always write tests before implementation
-7. **Test All Paths**: Cover success, validation errors, and infrastructure errors
+### バックエンド
+1. すべての関数は`Result<T, E>`を返す必要があります（ESLintで強制）
+2. ライブラリドキュメント用にContext7 MCPを使用：`mcp__context7__resolve-library-id` → `mcp__context7__get-library-docs`
+3. `.inject()`を使用してモック依存性でテスト
+4. 例外を投げない - 常に`err(new Error(...))`を返す
+5. ビジネスロジックはルートやリポジトリではなく、コマンド/クエリに保持
+6. **TDDファースト**: 実装前に常にテストを書く
+7. **すべてのパスをテスト**: 成功、バリデーションエラー、インフラエラーをカバー
+
+### フロントエンド
+1. **FSD層規則を厳守**: 上位層は下位層のみ参照可能
+2. **APIロジックは features/*/api に集約**: UIコンポーネントから直接APIを呼ばない
+3. **shared/ui コンポーネントはビジネスロジック非依存**: 汎用的な再利用可能コンポーネントのみ
+4. **型安全性の確保**: Hono clientによる型共有を活用
+5. **TanStack Query最適化**:適切なキャッシング・無効化戦略を実装
+
+## プロジェクトテンプレート利用ガイド
+
+このリポジトリを新しいプロジェクトのテンプレートとして使用する際の手順：
+
+### 1. 初期セットアップ
+
+```bash
+# リポジトリクローン
+git clone <this-repo> <new-project-name>
+cd <new-project-name>
+
+# リモートorigin変更
+git remote remove origin
+git remote add origin <new-repo-url>
+
+# 依存関係インストール
+yarn install
+
+# 初回ビルド・テスト確認
+yarn build
+yarn test
+```
+
+### 2. プロジェクト名変更
+
+```bash
+# package.jsonの name フィールドを更新
+# - ルートpackage.json: "name": "<new-project-name>"
+# - backend/package.json: "name": "@<new-project-name>/backend"  
+# - frontend/package.json: "name": "@<new-project-name>/frontend"
+
+# CLAUDE.mdのプロジェクト概要セクションを更新
+# README.mdの内容を新プロジェクト向けに更新
+```
+
+### 3. ドメイン固有実装への置き換え
+
+#### バックエンド
+```bash
+# 1. src/entities/ - ドメインエンティティを追加
+# 2. src/features/ - 新機能モジュールを追加（userは参考例として残す/削除）
+# 3. src/shared/adapters/db/ - 必要に応じてDBアダプターを追加
+# 4. src/server.ts - 新APIルートの追加
+```
+
+#### フロントエンド
+```bash
+# 1. src/features/ - 新機能モジュールを追加
+# 2. src/shared/ui/ - プロジェクト固有UIコンポーネント追加
+# 3. src/shared/types/ - 新エンティティ型を追加
+# 4. src/widgets/ - 複合UIウィジェット追加
+# 5. src/pages/ - 新ページを追加
+```
+
+### 4. 環境構築
+
+```bash
+# 開発環境設定
+cp .env.example .env.local  # 環境変数設定（作成する場合）
+
+# データベース初期化（必要に応じて）
+yarn workspace @<new-project-name>/backend db:migrate
+
+# 開発サーバー起動確認
+yarn dev
+```
+
+### 5. カスタマイズポイント
+
+#### デザインシステム
+- `frontend/src/shared/ui/` - UI コンポーネントライブラリ
+- `frontend/src/index.css` - Tailwind カスタムスタイル
+- `frontend/tailwind.config.js` - Tailwindテーマ設定（存在する場合）
+
+#### API設計
+- `backend/src/features/*/api/routes.ts` - エンドポイント設計
+- `backend/src/entities/` - ドメインモデル設計
+- `backend/src/shared/adapters/` - インフラ層設計
+
+#### 型共有
+- Hono型共有により、バックエンドAPIの変更は自動的にフロントエンドに反映
+- `frontend/src/shared/types/` で追加の型定義を管理
+
+### 6. 推奨拡張
+
+#### 認証・認可
+```bash
+# JWT認証の場合
+yarn workspace @<new-project-name>/backend add jsonwebtoken @types/jsonwebtoken
+# フロントエンド側でのトークン管理実装を features/auth に追加
+```
+
+#### バリデーション
+```bash  
+# Zodによるスキーマバリデーション
+yarn add zod
+# backend/src/shared/schemas/ でスキーマ定義
+```
+
+#### 状態管理
+```bash
+# Zustandによるクライアント状態管理（必要に応じて）
+yarn workspace @<new-project-name>/frontend add zustand
+```
+
+### 7. 継続的改善
+
+1. **機能追加時**: 必ずFSD層規則に従って配置
+2. **テスト拡充**: 新機能追加時は必ずテストを先行実装
+3. **型安全性維持**: TypeScript strict mode を維持
+4. **ドキュメント更新**: CLAUDE.md を新機能に合わせて更新
+5. **依存関係管理**: 定期的に依存関係をアップデート
+
+このテンプレートは実際のプロダクション環境で検証された設計パターンに基づいており、
+スケーラブルで保守性の高いフルスタックアプリケーションの基盤として活用できます。

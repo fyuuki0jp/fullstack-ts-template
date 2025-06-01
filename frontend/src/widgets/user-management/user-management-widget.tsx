@@ -1,9 +1,9 @@
 import { FC } from 'react';
-import { Card } from '@/components/atoms/Card';
-import { UserForm } from '@/components/molecules/UserForm';
-import { UserList } from '@/components/organisms/UserList';
+import { Card } from '@/shared/ui';
+import { UserForm } from '@/features/user-creation';
+import { UserList } from '@/features/user-list';
 
-export const UserManagement: FC = () => {
+export const UserManagementWidget: FC = () => {
   return (
     <div className="container mx-auto px-4 py-8">
       <h1 className="text-3xl font-bold text-gray-900 mb-8">User Management</h1>

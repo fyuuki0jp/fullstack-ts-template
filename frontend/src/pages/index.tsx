@@ -1,5 +1,5 @@
-import { UserManagement } from '@/components/templates/UserManagement';
+import { UserManagementWidget } from '@/widgets/user-management';
 
 export default function Home() {
-  return <UserManagement />;
+  return <UserManagementWidget />;
 }
