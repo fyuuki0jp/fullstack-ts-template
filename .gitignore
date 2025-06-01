@@ -27,3 +27,14 @@ lerna-debug.log*
 # misc
 .DS_Store
 *.db*
+
+# build
+dist/
+build/
+*.tsbuildinfo
+
+# testing
+coverage/
+
+# vite
+vite.config.ts.timestamp-*

@@ -1,0 +1,33 @@
+{
+  "name": "@spa-hono/frontend",
+  "version": "1.0.0",
+  "type": "module",
+  "private": true,
+  "scripts": {
+    "dev": "vite --host",
+    "build": "vite build",
+    "preview": "vite preview",
+    "test": "vitest run",
+    "test:watch": "vitest",
+    "lint": "eslint .",
+    "typecheck": "tsc --noEmit"
+  },
+  "dependencies": {
+    "@generouted/react-router": "^1.20.0",
+    "@tanstack/react-query": "^5.79.0",
+    "react": "^19.1.0",
+    "react-dom": "^19.1.0",
+    "react-router": "^7.6.1"
+  },
+  "devDependencies": {
+    "@tailwindcss/vite": "^4.1.8",
+    "@types/react": "^19.1.6",
+    "@types/react-dom": "^19.1.5",
+    "@vitejs/plugin-react": "^4.5.0",
+    "@vitest/ui": "^3.1.4",
+    "happy-dom": "^17.5.6",
+    "tailwindcss": "^4.1.8",
+    "vite": "^6.3.5",
+    "vitest": "^3.1.4"
+  }
+}

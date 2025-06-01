@@ -1,0 +1,31 @@
+{
+  "name": "@spa-hono/backend",
+  "version": "1.0.0",
+  "type": "module",
+  "private": true,
+  "main": "./dist/server.js",
+  "types": "./dist/server.d.ts",
+  "scripts": {
+    "dev": "tsx watch server.ts",
+    "build": "tsc",
+    "start": "node dist/server.js",
+    "test": "vitest run",
+    "test:watch": "vitest",
+    "lint": "eslint .",
+    "typecheck": "tsc --noEmit"
+  },
+  "dependencies": {
+    "@fyuuki0jp/railway-result": "^0.2.0",
+    "@hono/node-server": "^1.14.3",
+    "better-sqlite3": "^11.10.0",
+    "hono": "^4.7.10",
+    "velona": "^0.8.0"
+  },
+  "devDependencies": {
+    "@fyuuki0jp/eslint-plugin-railway": "^0.1.0",
+    "@types/better-sqlite3": "^7.6.13",
+    "@types/node": "^20.11.17",
+    "tsx": "^4.19.4",
+    "vitest": "^3.1.4"
+  }
+}

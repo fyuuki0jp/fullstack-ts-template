@@ -4,7 +4,8 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 
 ## Project Overview
 
-**Full-stack SPA Template** with modern architecture patterns:
+**Full-stack SPA Monorepo Template** with modern architecture patterns:
+- **Monorepo**: Yarn workspaces for package management
 - **Backend**: Hono + SQLite with Feature-Sliced Design (FSD), CQRS, Railway Result types
 - **Frontend**: React + Vite with file-based routing (generouted), Tailwind CSS
 - **Testing**: TDD with Vitest, comprehensive test patterns
@@ -18,16 +19,17 @@ For immediate development, see: **[.claude/quick-start.md](.claude/quick-start.m
 
 ```
 .
-├── backend/              # Backend API (port 3000)
-│   ├── entities/         # Shared business entities
-│   ├── features/         # Feature modules (FSD)
-│   ├── shared/          # Shared utilities & adapters
-│   └── server.ts        # Main server entry
-├── frontend/            # Frontend SPA
-│   ├── app/            # Routes (file-based)
-│   ├── components/     # Reusable components
-│   └── main.tsx        # React entry
-└── .claude/            # Claude AI documentation
+├── packages/
+│   ├── backend/          # Backend API package (@spa-hono/backend)
+│   │   ├── entities/     # Shared business entities
+│   │   ├── features/     # Feature modules (FSD)
+│   │   ├── shared/       # Shared utilities & adapters
+│   │   └── server.ts     # Main server entry
+│   └── frontend/         # Frontend SPA package (@spa-hono/frontend)
+│       ├── app/          # Routes (file-based)
+│       ├── components/   # Reusable components
+│       └── main.tsx      # React entry
+└── .claude/              # Claude AI documentation
 ```
 
 ## 📚 Documentation Structure
@@ -71,20 +73,23 @@ For immediate development, see: **[.claude/quick-start.md](.claude/quick-start.m
 ## 🔧 Available Commands
 
 ```bash
+# Initial Setup
+yarn install          # Install all dependencies for all packages
+
 # Development
 yarn dev              # Start both frontend & backend
-yarn dev:frontend     # Frontend only
-yarn dev:backend      # Backend only
+yarn workspace @spa-hono/frontend dev   # Frontend only
+yarn workspace @spa-hono/backend dev    # Backend only
 
 # Testing & Quality
-yarn test            # Run all tests
-yarn lint            # ESLint check
-yarn typecheck       # TypeScript check
+yarn test            # Run all tests in all packages
+yarn lint            # ESLint check all packages
+yarn typecheck       # TypeScript check all packages
 
 # Building
-yarn build           # Build everything
-yarn build:frontend  # Frontend only
-yarn build:backend   # Backend only
+yarn build           # Build all packages
+yarn workspace @spa-hono/frontend build  # Frontend only
+yarn workspace @spa-hono/backend build   # Backend only
 ```
 
 ## 📝 Important Notes

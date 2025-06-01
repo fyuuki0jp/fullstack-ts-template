@@ -1,50 +1,46 @@
-import eslint from '@eslint/js';
-import tseslint from '@typescript-eslint/eslint-plugin';
-import tsparser from '@typescript-eslint/parser';
-import prettier from 'eslint-plugin-prettier';
-import railwayPlugin from '@fyuuki0jp/eslint-plugin-railway';
-import prettierConfig from 'eslint-config-prettier';
+import js from '@eslint/js';
+import typescript from '@typescript-eslint/eslint-plugin';
+import tsParser from '@typescript-eslint/parser';
+import railway from '@fyuuki0jp/eslint-plugin-railway';
+import prettier from 'eslint-config-prettier';
+import prettierPlugin from 'eslint-plugin-prettier';
 
 export default [
-  eslint.configs.recommended,
-  railwayPlugin.configs.recommended,
-  prettierConfig,
+  js.configs.recommended,
+  prettier,
+  {
+    ignores: ['**/dist/**', '**/node_modules/**', '**/.turbo/**', '**/coverage/**'],
+  },
   {
     files: ['**/*.ts', '**/*.tsx'],
     languageOptions: {
-      parser: tsparser,
+      parser: tsParser,
       parserOptions: {
         ecmaVersion: 'latest',
         sourceType: 'module',
       },
-      globals: {
-        console: 'readonly',
-        process: 'readonly',
-        Buffer: 'readonly',
-        __dirname: 'readonly',
-        __filename: 'readonly',
-        exports: 'writable',
-        module: 'readonly',
-        require: 'readonly',
-        global: 'readonly',
-      },
     },
     plugins: {
-      '@typescript-eslint': tseslint,
-      prettier,
+      '@typescript-eslint': typescript,
+      prettier: prettierPlugin,
+      railway,
     },
     rules: {
-      ...tseslint.configs.recommended.rules,
+      ...typescript.configs.recommended.rules,
       'prettier/prettier': 'error',
+      'railway/use-result': 'error',
+      '@typescript-eslint/no-unused-vars': [
+        'error',
+        { argsIgnorePattern: '^_', varsIgnorePattern: '^_' },
+      ],
+      '@typescript-eslint/explicit-module-boundary-types': 'off',
+      '@typescript-eslint/no-explicit-any': 'error',
     },
   },
   {
-    files: ['**/*.tsx'],
+    files: ['**/*.spec.ts', '**/*.spec.tsx'],
     rules: {
-      '@fyuuki0jp/railway/require-result-return-type': 'off',
+      'railway/use-result': 'off',
     },
-  },
-  {
-    ignores: ['node_modules/', 'dist/', 'coverage/'],
   },
 ];

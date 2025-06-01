@@ -33,11 +33,11 @@ Let's create a "Product" feature step by step.
 
 ```bash
 # Create entity file
-touch backend/entities/product.ts
+touch packages/backend/entities/product.ts
 ```
 
 ```typescript
-// backend/entities/product.ts
+// packages/backend/entities/product.ts
 import type { Entity } from './types';
 
 export interface Product extends Entity {
@@ -51,14 +51,14 @@ export interface Product extends Entity {
 
 ```bash
 # Create feature directories
-mkdir -p backend/features/product/{api,commands,queries,domain}
+mkdir -p packages/backend/features/product/{api,commands,queries,domain}
 ```
 
 ### Step 3: Write Tests First (TDD)
 
 ```bash
 # Create test file
-touch backend/features/product/commands/create-product.spec.ts
+touch packages/backend/features/product/commands/create-product.spec.ts
 ```
 
 See the existing `user` feature for test examples!
@@ -75,11 +75,11 @@ Follow this order:
 
 ```bash
 # Create product listing page
-touch frontend/app/products/index.tsx
+touch packages/frontend/app/products/index.tsx
 ```
 
 ```tsx
-// frontend/app/products/index.tsx
+// packages/frontend/app/products/index.tsx
 export default function ProductsPage() {
   // Your component code
 }
@@ -89,13 +89,13 @@ export default function ProductsPage() {
 
 ### Add a New API Endpoint
 
-1. Add route in `backend/features/[feature]/api/routes.ts`
+1. Add route in `packages/backend/features/[feature]/api/routes.ts`
 2. Use method chaining pattern
 3. Return consistent response format
 
 ### Add a Frontend Page
 
-1. Create file in `frontend/app/[route].tsx`
+1. Create file in `packages/frontend/app/[route].tsx`
 2. Route is automatically generated
 3. Use fetch for API calls
 
@@ -114,10 +114,10 @@ yarn test user.spec
 
 ### Database Migrations
 
-The database schema is created automatically in `backend/server.ts`. To add a new table:
+The database schema is created automatically in `packages/backend/server.ts`. To add a new table:
 
 ```typescript
-// In backend/server.ts
+// In packages/backend/server.ts
 db.exec(`
   CREATE TABLE IF NOT EXISTS products (
     id TEXT PRIMARY KEY,
