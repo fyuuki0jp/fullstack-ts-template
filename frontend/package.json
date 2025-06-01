@@ -33,6 +33,7 @@
     "@vitejs/plugin-react": "^4.5.0",
     "@vitest/ui": "^3.1.4",
     "happy-dom": "^17.5.6",
+    "jsdom": "^26.1.0",
     "msw": "^2.8.7",
     "tailwindcss": "^4.1.8",
     "vite": "^6.3.5",
