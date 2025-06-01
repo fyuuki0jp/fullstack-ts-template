@@ -1,0 +1,5 @@
+{
+  "vitest.enable": true,
+  "vitest.exclude": ["**/node_modules/**", "**/dist/**", ".git/**"],
+  "vitest.packagePath": "node_modules/vitest"
+}
