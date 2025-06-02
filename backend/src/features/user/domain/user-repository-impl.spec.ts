@@ -2,6 +2,7 @@ import { describe, it, expect, beforeEach } from 'vitest';
 import { userRepositoryImpl } from './user-repository-impl';
 import { MockDbAdapter } from '../../../shared/adapters/db/mock';
 import { isErr } from '@fyuuki0jp/railway-result';
+import type { EntityId } from '../../../entities/types';
 
 describe('UserRepositoryImpl', () => {
   let mockDb: MockDbAdapter;
@@ -16,14 +17,14 @@ describe('UserRepositoryImpl', () => {
     it('should return all users sorted by updatedAt DESC', async () => {
       const users = [
         {
-          id: '1',
+          id: '550e8400-e29b-41d4-a716-446655440001',
           email: 'user1@example.com',
           name: 'User 1',
           created_at: '2023-01-01T00:00:00Z',
           updated_at: '2023-01-01T00:00:00Z',
         },
         {
-          id: '2',
+          id: '550e8400-e29b-41d4-a716-446655440002',
           email: 'user2@example.com',
           name: 'User 2',
           created_at: '2023-01-02T00:00:00Z',
@@ -37,7 +38,7 @@ describe('UserRepositoryImpl', () => {
       expect(result.success).toBe(true);
       if (result.success) {
         expect(result.data).toHaveLength(2);
-        expect(result.data[0].id).toBe('2'); // Should be sorted by updatedAt DESC
+        expect(result.data[0].id).toBe('550e8400-e29b-41d4-a716-446655440002'); // Should be sorted by updatedAt DESC
         expect(result.data[0].email).toBe('user2@example.com');
         expect(result.data[0].createdAt).toBeInstanceOf(Date);
         expect(result.data[0].updatedAt).toBeInstanceOf(Date);
@@ -67,8 +68,9 @@ describe('UserRepositoryImpl', () => {
 
   describe('findById', () => {
     it('should find user by id', async () => {
+      const userId = '550e8400-e29b-41d4-a716-446655440003' as EntityId;
       const user = {
-        id: '1',
+        id: userId,
         email: 'test@example.com',
         name: 'Test User',
         created_at: '2023-01-01T00:00:00Z',
@@ -76,7 +78,7 @@ describe('UserRepositoryImpl', () => {
       };
       mockDb.setData('users', [user]);
 
-      const result = await userRepo.findById('1');
+      const result = await userRepo.findById(userId);
 
       expect(result.success).toBe(true);
       if (result.success) {
@@ -89,7 +91,7 @@ describe('UserRepositoryImpl', () => {
     it('should return null when user not found', async () => {
       mockDb.setData('users', []);
 
-      const result = await userRepo.findById('notfound');
+      const result = await userRepo.findById('550e8400-e29b-41d4-a716-446655440004' as EntityId);
 
       expect(result.success).toBe(true);
       if (result.success) {
@@ -100,7 +102,7 @@ describe('UserRepositoryImpl', () => {
     it('should handle database errors', async () => {
       mockDb.mockFailure('Query failed');
 
-      const result = await userRepo.findById('1');
+      const result = await userRepo.findById('550e8400-e29b-41d4-a716-446655440005' as EntityId);
 
       expect(isErr(result)).toBe(true);
       if (isErr(result)) {
@@ -151,7 +153,7 @@ describe('UserRepositoryImpl', () => {
       // Add existing user
       mockDb.setData('users', [
         {
-          id: '1',
+          id: '550e8400-e29b-41d4-a716-446655440006',
           email: 'existing@example.com',
           name: 'Existing User',
           created_at: '2023-01-01T00:00:00Z',
@@ -173,8 +175,9 @@ describe('UserRepositoryImpl', () => {
 
   describe('transformToEntity', () => {
     it('should transform database row to User entity', async () => {
+      const userId = '550e8400-e29b-41d4-a716-446655440007' as EntityId;
       const dbRow = {
-        id: '123',
+        id: userId,
         email: 'test@example.com',
         name: 'Test User',
         created_at: '2023-01-01T12:00:00Z',
@@ -182,12 +185,12 @@ describe('UserRepositoryImpl', () => {
       };
       mockDb.setData('users', [dbRow]);
 
-      const result = await userRepo.findById('123');
+      const result = await userRepo.findById(userId);
 
       expect(result.success).toBe(true);
       if (result.success && result.data) {
         const user = result.data;
-        expect(user.id).toBe('123');
+        expect(user.id).toBe(userId);
         expect(user.email).toBe('test@example.com');
         expect(user.name).toBe('Test User');
         expect(user.createdAt).toBeInstanceOf(Date);

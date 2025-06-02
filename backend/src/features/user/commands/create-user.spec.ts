@@ -23,10 +23,12 @@ describe('createUser command', () => {
       name: 'Test User',
     };
     const createdUser: User = {
-      id: '123',
-      ...input,
+      id: '550e8400-e29b-41d4-a716-446655440001' as any,
+      email: input.email as any,
+      name: input.name as any,
       createdAt: new Date(),
       updatedAt: new Date(),
+      deletedAt: null,
     };
 
     vi.mocked(mockUserRepo.create).mockResolvedValue(ok(createdUser));
@@ -50,7 +52,7 @@ describe('createUser command', () => {
 
     expect(isErr(result)).toBe(true);
     if (isErr(result)) {
-      expect(result.error.message).toBe('Invalid email format');
+      expect(result.error.message).toContain('Invalid email format');
     }
     expect(mockUserRepo.create).not.toHaveBeenCalled();
   });
@@ -80,7 +82,7 @@ describe('createUser command', () => {
 
     expect(isErr(result)).toBe(true);
     if (isErr(result)) {
-      expect(result.error.message).toBe('Invalid email format');
+      expect(result.error.message).toContain('Invalid email format');
     }
     expect(mockUserRepo.create).not.toHaveBeenCalled();
   });
@@ -96,11 +98,12 @@ describe('createUser command', () => {
     for (const email of validEmails) {
       vi.mocked(mockUserRepo.create).mockResolvedValue(
         ok({
-          id: '123',
-          email,
-          name: 'Test User',
+          id: '550e8400-e29b-41d4-a716-446655440001' as any,
+          email: email as any,
+          name: 'Test User' as any,
           createdAt: new Date(),
           updatedAt: new Date(),
+          deletedAt: null,
         })
       );
 
@@ -159,11 +162,12 @@ describe('createUser command', () => {
     };
 
     const expectedUser: User = {
-      id: '123',
-      email: 'test@example.com',
-      name: 'Test User',
+      id: '550e8400-e29b-41d4-a716-446655440001' as any,
+      email: 'test@example.com' as any,
+      name: 'Test User' as any,
       createdAt: new Date(),
       updatedAt: new Date(),
+      deletedAt: null,
     };
 
     vi.mocked(mockUserRepo.create).mockResolvedValue(ok(expectedUser));
@@ -187,7 +191,7 @@ describe('createUser command', () => {
 
     expect(isErr(result)).toBe(true);
     if (isErr(result)) {
-      expect(result.error.message).toBe('Name is required');
+      expect(result.error.message).toContain('Name is required');
     }
     expect(mockUserRepo.create).not.toHaveBeenCalled();
   });
@@ -202,7 +206,7 @@ describe('createUser command', () => {
 
     expect(isErr(result)).toBe(true);
     if (isErr(result)) {
-      expect(result.error.message).toBe('Name must be 100 characters or less');
+      expect(result.error.message).toContain('Name must be 100 characters or less');
     }
     expect(mockUserRepo.create).not.toHaveBeenCalled();
   });

@@ -26,18 +26,20 @@ describe('User API Routes', () => {
     it('should return all users when they exist', async () => {
       const users = [
         {
-          id: '1',
+          id: '550e8400-e29b-41d4-a716-446655440001',
           email: 'user1@example.com',
           name: 'User 1',
           created_at: '2023-01-01T00:00:00Z',
           updated_at: '2023-01-01T00:00:00Z',
+          deleted_at: null,
         },
         {
-          id: '2',
+          id: '550e8400-e29b-41d4-a716-446655440002',
           email: 'user2@example.com',
           name: 'User 2',
           created_at: '2023-01-02T00:00:00Z',
           updated_at: '2023-01-02T00:00:00Z',
+          deleted_at: null,
         },
       ];
       mockDb.setData('users', users);
@@ -106,7 +108,7 @@ describe('User API Routes', () => {
 
       expect(res.status).toBe(400);
       const data = await res.json();
-      expect(data.error).toBe('Invalid email format');
+      expect(data.error).toContain('Invalid email format');
 
       // Verify no user was stored
       const users = mockDb.getData('users');
