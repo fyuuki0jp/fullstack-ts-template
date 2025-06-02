@@ -1,6 +1,7 @@
 import { FC, FormEvent, useState } from 'react';
 import { Button, Input } from '@/shared/ui';
 import { useCreateUser } from '../api';
+import { validateCreateUserInputWithErrors } from '@/shared/types/user';
 
 interface UserFormProps {
   onSuccess?: () => void;
@@ -13,34 +14,29 @@ export const UserForm: FC<UserFormProps> = ({ onSuccess }) => {
   const [nameError, setNameError] = useState('');
   const { mutate: createUser, isPending, error } = useCreateUser();
 
-  const validateEmail = (value: string) => {
-    if (!value) {
-      return 'Email is required';
+  const validateForm = () => {
+    const validation = validateCreateUserInputWithErrors({ email, name });
+    if (validation.success) {
+      setEmailError('');
+      setNameError('');
+      return true;
     }
-    if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(value)) {
-      return 'Please enter a valid email address';
-    }
-    return '';
-  };
-
-  const validateName = (value: string) => {
-    if (!value) {
-      return 'Name is required';
-    }
-    if (value.length < 2) {
-      return 'Name must be at least 2 characters long';
-    }
-    return '';
+    
+    setEmailError(validation.errors?.email || '');
+    setNameError(validation.errors?.name || '');
+    return false;
   };
 
   const handleEmailChange = (value: string) => {
     setEmail(value);
-    setEmailError(validateEmail(value));
+    // Clear error when user starts typing
+    if (emailError) setEmailError('');
   };
 
   const handleNameChange = (value: string) => {
     setName(value);
-    setNameError(validateName(value));
+    // Clear error when user starts typing
+    if (nameError) setNameError('');
   };
 
   const isFormValid = email && name && !emailError && !nameError;
@@ -48,14 +44,8 @@ export const UserForm: FC<UserFormProps> = ({ onSuccess }) => {
   const handleSubmit = (e: FormEvent) => {
     e.preventDefault();
 
-    // Validate on submit
-    const emailValidation = validateEmail(email);
-    const nameValidation = validateName(name);
-
-    setEmailError(emailValidation);
-    setNameError(nameValidation);
-
-    if (emailValidation || nameValidation) {
+    // Validate form with zod
+    if (!validateForm()) {
       return;
     }
 

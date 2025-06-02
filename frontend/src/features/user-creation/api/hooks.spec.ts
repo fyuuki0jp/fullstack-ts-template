@@ -24,11 +24,12 @@ describe('useCreateUser', () => {
 
   it('successfully creates a user', async () => {
     const mockUser = {
-      id: '1',
+      id: '550e8400-e29b-41d4-a716-446655440001',
       name: 'John Doe',
       email: 'john@example.com',
       createdAt: '2023-01-01T00:00:00Z',
       updatedAt: '2023-01-01T00:00:00Z',
+      deletedAt: null,
     };
 
     const mockResponse = {
@@ -150,11 +151,12 @@ describe('useCreateUser', () => {
 
   it('calls onSuccess callback and invalidates queries', async () => {
     const mockUser = {
-      id: '1',
+      id: '550e8400-e29b-41d4-a716-446655440001',
       name: 'John Doe',
       email: 'john@example.com',
       createdAt: '2023-01-01T00:00:00Z',
       updatedAt: '2023-01-01T00:00:00Z',
+      deletedAt: null,
     };
 
     const mockResponse = {
