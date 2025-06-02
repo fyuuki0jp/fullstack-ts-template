@@ -1,15 +1,32 @@
 #!/bin/bash
 
 # Frontend Feature Boilerplate Generator
-# Usage: ./create-feature.sh <feature-name> [entity-name]
+# Usage: ./create-feature.sh <feature-name> [entity-name] [--dry-run]
 
 FEATURE_NAME=$1
 ENTITY_NAME=${2:-$1}  # Use feature name as entity name if not provided
+DRY_RUN=false
 
-if [ -z "$FEATURE_NAME" ]; then
-    echo "Usage: $0 <feature-name> [entity-name]"
+# Parse arguments
+for arg in "$@"; do
+    case $arg in
+        --dry-run)
+            DRY_RUN=true
+            ;;
+    esac
+done
+
+# Handle if --dry-run is the second parameter
+if [ "$2" = "--dry-run" ]; then
+    ENTITY_NAME=$1
+    DRY_RUN=true
+fi
+
+if [ -z "$FEATURE_NAME" ] || [ "$FEATURE_NAME" = "--dry-run" ]; then
+    echo "Usage: $0 <feature-name> [entity-name] [--dry-run]"
     echo "Example: $0 user-management user"
     echo "Example: $0 product"
+    echo "Example: $0 product --dry-run"
     exit 1
 fi
 
@@ -18,12 +35,26 @@ PASCAL_CASE_NAME=$(echo "$ENTITY_NAME" | sed -r 's/(^|-)([a-z])/\U\2/g')
 
 # Create feature directory structure
 FEATURE_DIR="frontend/src/features/$FEATURE_NAME"
-mkdir -p "$FEATURE_DIR/api"
-mkdir -p "$FEATURE_DIR/ui"
-mkdir -p "$FEATURE_DIR/model"
+
+if [ "$DRY_RUN" = true ]; then
+    echo "🔍 DRY RUN MODE - No files will be created"
+    echo ""
+    echo "Would create directories:"
+    echo "  - $FEATURE_DIR/api"
+    echo "  - $FEATURE_DIR/ui"
+    echo "  - $FEATURE_DIR/model"
+    echo ""
+else
+    mkdir -p "$FEATURE_DIR/api"
+    mkdir -p "$FEATURE_DIR/ui"
+    mkdir -p "$FEATURE_DIR/model"
+fi
 
 # Create types file
-cat > "$FEATURE_DIR/types.ts" << EOF
+if [ "$DRY_RUN" = true ]; then
+    echo "Would create file: $FEATURE_DIR/types.ts"
+else
+    cat > "$FEATURE_DIR/types.ts" << EOF
 export interface ${PASCAL_CASE_NAME} {
   id: string;
   name: string;
@@ -50,9 +81,13 @@ export interface ${PASCAL_CASE_NAME}Response {
   ${ENTITY_NAME}: ${PASCAL_CASE_NAME};
 }
 EOF
+fi
 
 # Create API hooks file
-cat > "$FEATURE_DIR/api/hooks.ts" << EOF
+if [ "$DRY_RUN" = true ]; then
+    echo "Would create file: $FEATURE_DIR/api/hooks.ts"
+else
+    cat > "$FEATURE_DIR/api/hooks.ts" << EOF
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { apiClient } from '@/shared/lib';
 import type { 
@@ -182,9 +217,13 @@ export const useDelete${PASCAL_CASE_NAME} = () => {
   });
 };
 EOF
+fi
 
 # Create API hooks test file
-cat > "$FEATURE_DIR/api/hooks.spec.ts" << EOF
+if [ "$DRY_RUN" = true ]; then
+    echo "Would create file: $FEATURE_DIR/api/hooks.spec.ts"
+else
+    cat > "$FEATURE_DIR/api/hooks.spec.ts" << EOF
 import { describe, it, expect, vi, beforeEach } from 'vitest';
 import { renderHook, waitFor } from '@testing-library/react';
 import { 
@@ -375,14 +414,22 @@ describe('${PASCAL_CASE_NAME} API hooks', () => {
   });
 });
 EOF
+fi
 
 # Create API index file
-cat > "$FEATURE_DIR/api/index.ts" << EOF
+if [ "$DRY_RUN" = true ]; then
+    echo "Would create file: $FEATURE_DIR/api/index.ts"
+else
+    cat > "$FEATURE_DIR/api/index.ts" << EOF
 export * from './hooks';
 EOF
+fi
 
 # Create form component
-cat > "$FEATURE_DIR/ui/${ENTITY_NAME}-form.tsx" << EOF
+if [ "$DRY_RUN" = true ]; then
+    echo "Would create file: $FEATURE_DIR/ui/${ENTITY_NAME}-form.tsx"
+else
+    cat > "$FEATURE_DIR/ui/${ENTITY_NAME}-form.tsx" << EOF
 import { FC, FormEvent, useState, useEffect } from 'react';
 import { Button, Input, Card } from '@/shared/ui';
 import { useCreate${PASCAL_CASE_NAME}, useUpdate${PASCAL_CASE_NAME} } from '../api';
@@ -504,9 +551,13 @@ export const ${PASCAL_CASE_NAME}Form: FC<${PASCAL_CASE_NAME}FormProps> = ({
   );
 };
 EOF
+fi
 
 # Create list component
-cat > "$FEATURE_DIR/ui/${ENTITY_NAME}-list.tsx" << EOF
+if [ "$DRY_RUN" = true ]; then
+    echo "Would create file: $FEATURE_DIR/ui/${ENTITY_NAME}-list.tsx"
+else
+    cat > "$FEATURE_DIR/ui/${ENTITY_NAME}-list.tsx" << EOF
 import { FC, useState } from 'react';
 import { Card, Button } from '@/shared/ui';
 import { use${PASCAL_CASE_NAME}s, useDelete${PASCAL_CASE_NAME} } from '../api';
@@ -596,9 +647,14 @@ export const ${PASCAL_CASE_NAME}List: FC = () => {
   );
 };
 EOF
+fi
 
 # Create component tests
-cat > "$FEATURE_DIR/ui/${ENTITY_NAME}-form.spec.tsx" << EOF
+if [ "$DRY_RUN" = true ]; then
+    echo "Would create file: $FEATURE_DIR/ui/${ENTITY_NAME}-form.spec.tsx"
+    echo "Would create file: $FEATURE_DIR/ui/${ENTITY_NAME}-list.spec.tsx"
+else
+    cat > "$FEATURE_DIR/ui/${ENTITY_NAME}-form.spec.tsx" << EOF
 import { describe, it, expect, vi } from 'vitest';
 import { render, screen, fireEvent } from '@testing-library/react';
 import { ${PASCAL_CASE_NAME}Form } from './${ENTITY_NAME}-form';
@@ -679,7 +735,7 @@ describe('${PASCAL_CASE_NAME}Form', () => {
 });
 EOF
 
-cat > "$FEATURE_DIR/ui/${ENTITY_NAME}-list.spec.tsx" << EOF
+    cat > "$FEATURE_DIR/ui/${ENTITY_NAME}-list.spec.tsx" << EOF
 import { describe, it, expect, vi } from 'vitest';
 import { render, screen } from '@testing-library/react';
 import { ${PASCAL_CASE_NAME}List } from './${ENTITY_NAME}-list';
@@ -757,22 +813,42 @@ describe('${PASCAL_CASE_NAME}List', () => {
   });
 });
 EOF
+fi
 
 # Create UI index file
-cat > "$FEATURE_DIR/ui/index.ts" << EOF
+if [ "$DRY_RUN" = true ]; then
+    echo "Would create file: $FEATURE_DIR/ui/index.ts"
+else
+    cat > "$FEATURE_DIR/ui/index.ts" << EOF
 export * from './${ENTITY_NAME}-form';
 export * from './${ENTITY_NAME}-list';
 EOF
+fi
 
 # Create feature index file
-cat > "$FEATURE_DIR/index.ts" << EOF
+if [ "$DRY_RUN" = true ]; then
+    echo "Would create file: $FEATURE_DIR/index.ts"
+else
+    cat > "$FEATURE_DIR/index.ts" << EOF
 export * from './api';
 export * from './ui';
 export * from './types';
 EOF
+fi
 
-echo "✅ Frontend feature '${FEATURE_NAME}' created successfully!"
-echo "📁 Created in: $FEATURE_DIR"
+if [ "$DRY_RUN" = true ]; then
+    echo "✅ DRY RUN completed for frontend feature '${FEATURE_NAME}'"
+    echo "📁 Would create in: $FEATURE_DIR"
+    echo ""
+    echo "Would create:"
+    echo "  - Type definitions"
+    echo "  - API hooks (React Query)"
+    echo "  - UI components: Form and List"
+    echo "  - Complete test suites"
+else
+    echo "✅ Frontend feature '${FEATURE_NAME}' created successfully!"
+    echo "📁 Created in: $FEATURE_DIR"
+fi
 echo ""
 echo "Next steps:"
 echo "1. Update the types in types.ts according to your domain"

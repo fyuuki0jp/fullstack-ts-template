@@ -1,15 +1,32 @@
 #!/bin/bash
 
 # Frontend Page Boilerplate Generator
-# Usage: ./create-page.sh <page-name> [widget-name]
+# Usage: ./create-page.sh <page-name> [widget-name] [--dry-run]
 
 PAGE_NAME=$1
 WIDGET_NAME=${2:-$1}
+DRY_RUN=false
 
-if [ -z "$PAGE_NAME" ]; then
-    echo "Usage: $0 <page-name> [widget-name]"
+# Parse arguments
+for arg in "$@"; do
+    case $arg in
+        --dry-run)
+            DRY_RUN=true
+            ;;
+    esac
+done
+
+# Handle if --dry-run is the second parameter
+if [ "$2" = "--dry-run" ]; then
+    WIDGET_NAME=$1
+    DRY_RUN=true
+fi
+
+if [ -z "$PAGE_NAME" ] || [ "$PAGE_NAME" = "--dry-run" ]; then
+    echo "Usage: $0 <page-name> [widget-name] [--dry-run]"
     echo "Example: $0 dashboard dashboard"
     echo "Example: $0 products product-management"
+    echo "Example: $0 dashboard --dry-run"
     exit 1
 fi
 
@@ -17,12 +34,35 @@ fi
 PAGE_PASCAL=$(echo "$PAGE_NAME" | sed -r 's/(^|-)([a-z])/\U\2/g')
 WIDGET_PASCAL=$(echo "$WIDGET_NAME" | sed -r 's/(^|-)([a-z])/\U\2/g')
 
+# Helper function to create files
+create_file() {
+    local file_path=$1
+    local file_content=$2
+    
+    if [ "$DRY_RUN" = true ]; then
+        echo "Would create file: $file_path"
+        return
+    fi
+    
+    cat > "$file_path" << EOF
+$file_content
+EOF
+}
+
 # Create page directory
 PAGE_DIR="frontend/src/pages"
-mkdir -p "$PAGE_DIR"
+
+if [ "$DRY_RUN" = true ]; then
+    echo "🔍 DRY RUN MODE - No files will be created"
+    echo ""
+    echo "Would create directory: $PAGE_DIR"
+    echo ""
+else
+    mkdir -p "$PAGE_DIR"
+fi
 
 # Create page component
-cat > "$PAGE_DIR/${PAGE_NAME}.tsx" << EOF
+create_file "$PAGE_DIR/${PAGE_NAME}.tsx" "\
 import { FC } from 'react';
 import { ${WIDGET_PASCAL}Widget } from '@/widgets/${WIDGET_NAME}';
 
@@ -38,7 +78,7 @@ export default ${PAGE_PASCAL}Page;
 EOF
 
 # Create page with layout component
-cat > "$PAGE_DIR/${PAGE_NAME}-with-layout.tsx" << EOF
+create_file "$PAGE_DIR/${PAGE_NAME}-with-layout.tsx" "\
 import { FC } from 'react';
 import { Link } from 'react-router-dom';
 import { ${WIDGET_PASCAL}Widget } from '@/widgets/${WIDGET_NAME}';
@@ -92,7 +132,7 @@ export default ${PAGE_PASCAL}PageWithLayout;
 EOF
 
 # Create page with sidebar layout
-cat > "$PAGE_DIR/${PAGE_NAME}-sidebar.tsx" << EOF
+create_file "$PAGE_DIR/${PAGE_NAME}-sidebar.tsx" "\
 import { FC, useState } from 'react';
 import { Link, useLocation } from 'react-router-dom';
 import { ${WIDGET_PASCAL}Widget } from '@/widgets/${WIDGET_NAME}';
@@ -147,7 +187,7 @@ export default ${PAGE_PASCAL}PageSidebar;
 EOF
 
 # Create page test file
-cat > "$PAGE_DIR/${PAGE_NAME}.spec.tsx" << EOF
+create_file "$PAGE_DIR/${PAGE_NAME}.spec.tsx" "\
 import { describe, it, expect, vi } from 'vitest';
 import { render, screen } from '@testing-library/react';
 import { BrowserRouter } from 'react-router-dom';
@@ -183,7 +223,7 @@ describe('${PAGE_PASCAL}Page', () => {
 EOF
 
 # Create layout page test file
-cat > "$PAGE_DIR/${PAGE_NAME}-with-layout.spec.tsx" << EOF
+create_file "$PAGE_DIR/${PAGE_NAME}-with-layout.spec.tsx" "\
 import { describe, it, expect, vi } from 'vitest';
 import { render, screen } from '@testing-library/react';
 import { BrowserRouter } from 'react-router-dom';
@@ -225,13 +265,23 @@ describe('${PAGE_PASCAL}PageWithLayout', () => {
 });
 EOF
 
-echo "✅ Frontend page '${PAGE_NAME}' created successfully!"
-echo "📁 Created files:"
-echo "   - $PAGE_DIR/${PAGE_NAME}.tsx (simple page)"
-echo "   - $PAGE_DIR/${PAGE_NAME}-with-layout.tsx (with header/footer)"
-echo "   - $PAGE_DIR/${PAGE_NAME}-sidebar.tsx (with sidebar navigation)"
-echo "   - $PAGE_DIR/${PAGE_NAME}.spec.tsx (tests)"
-echo "   - $PAGE_DIR/${PAGE_NAME}-with-layout.spec.tsx (tests)"
+if [ "$DRY_RUN" = true ]; then
+    echo "✅ DRY RUN completed for frontend page '${PAGE_NAME}'"
+    echo "📁 Would create files:"
+    echo "   - $PAGE_DIR/${PAGE_NAME}.tsx (simple page)"
+    echo "   - $PAGE_DIR/${PAGE_NAME}-with-layout.tsx (with header/footer)"
+    echo "   - $PAGE_DIR/${PAGE_NAME}-sidebar.tsx (with sidebar navigation)"
+    echo "   - $PAGE_DIR/${PAGE_NAME}.spec.tsx (tests)"
+    echo "   - $PAGE_DIR/${PAGE_NAME}-with-layout.spec.tsx (tests)"
+else
+    echo "✅ Frontend page '${PAGE_NAME}' created successfully!"
+    echo "📁 Created files:"
+    echo "   - $PAGE_DIR/${PAGE_NAME}.tsx (simple page)"
+    echo "   - $PAGE_DIR/${PAGE_NAME}-with-layout.tsx (with header/footer)"
+    echo "   - $PAGE_DIR/${PAGE_NAME}-sidebar.tsx (with sidebar navigation)"
+    echo "   - $PAGE_DIR/${PAGE_NAME}.spec.tsx (tests)"
+    echo "   - $PAGE_DIR/${PAGE_NAME}-with-layout.spec.tsx (tests)"
+fi
 echo ""
 echo "Next steps:"
 echo "1. Make sure the widget exists: @/widgets/${WIDGET_NAME}"

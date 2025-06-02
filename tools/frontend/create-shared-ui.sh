@@ -1,32 +1,72 @@
 #!/bin/bash
 
 # Frontend Shared UI Component Boilerplate Generator
-# Usage: ./create-shared-ui.sh <component-name> [component-type]
+# Usage: ./create-shared-ui.sh <component-name> [component-type] [--dry-run]
 
 COMPONENT_NAME=$1
 COMPONENT_TYPE=${2:-"generic"}  # generic, form, layout, feedback
+DRY_RUN=false
 
-if [ -z "$COMPONENT_NAME" ]; then
-    echo "Usage: $0 <component-name> [component-type]"
+# Parse arguments
+for arg in "$@"; do
+    case $arg in
+        --dry-run)
+            DRY_RUN=true
+            ;;
+    esac
+done
+
+# Handle if --dry-run is the second parameter
+if [ "$2" = "--dry-run" ]; then
+    COMPONENT_TYPE="generic"
+    DRY_RUN=true
+fi
+
+if [ -z "$COMPONENT_NAME" ] || [ "$COMPONENT_NAME" = "--dry-run" ]; then
+    echo "Usage: $0 <component-name> [component-type] [--dry-run]"
     echo "Component types: generic, form, layout, feedback"
     echo "Example: $0 modal layout"
     echo "Example: $0 text-field form"
     echo "Example: $0 alert feedback"
+    echo "Example: $0 modal layout --dry-run"
     exit 1
 fi
 
 # Convert component name to PascalCase
 PASCAL_CASE_NAME=$(echo "$COMPONENT_NAME" | sed -r 's/(^|-)([a-z])/\U\2/g')
 
+# Helper function to create files
+create_file() {
+    local file_path=$1
+    local file_content=$2
+    
+    if [ "$DRY_RUN" = true ]; then
+        echo "Would create file: $file_path"
+        return
+    fi
+    
+    cat > "$file_path" << EOF
+$file_content
+EOF
+}
+
 # Create shared UI directory
 UI_DIR="frontend/src/shared/ui"
-mkdir -p "$UI_DIR"
+
+if [ "$DRY_RUN" = true ]; then
+    echo "🔍 DRY RUN MODE - No files will be created"
+    echo ""
+    echo "Would create directory: $UI_DIR"
+    echo ""
+else
+    mkdir -p "$UI_DIR"
+fi
 
 # Generate component based on type
 case "$COMPONENT_TYPE" in
     "form")
         # Form component template
-        cat > "$UI_DIR/${COMPONENT_NAME}.tsx" << EOF
+        create_file "$UI_DIR/${COMPONENT_NAME}.tsx" "\
 import { forwardRef, InputHTMLAttributes } from 'react';
 import { cn } from '@/shared/lib/utils';
 
@@ -87,7 +127,7 @@ EOF
         
     "layout")
         # Layout component template
-        cat > "$UI_DIR/${COMPONENT_NAME}.tsx" << EOF
+        create_file "$UI_DIR/${COMPONENT_NAME}.tsx" "\
 import { FC, ReactNode } from 'react';
 import { cn } from '@/shared/lib/utils';
 
@@ -171,7 +211,7 @@ EOF
         
     "feedback")
         # Feedback component template
-        cat > "$UI_DIR/${COMPONENT_NAME}.tsx" << EOF
+        create_file "$UI_DIR/${COMPONENT_NAME}.tsx" "\
 import { FC, ReactNode, useEffect, useState } from 'react';
 import { cn } from '@/shared/lib/utils';
 
@@ -270,7 +310,7 @@ EOF
         
     *)
         # Generic component template
-        cat > "$UI_DIR/${COMPONENT_NAME}.tsx" << EOF
+        create_file "$UI_DIR/${COMPONENT_NAME}.tsx" "\
 import { FC, HTMLAttributes, forwardRef } from 'react';
 import { cn } from '@/shared/lib/utils';
 
@@ -318,7 +358,7 @@ EOF
 esac
 
 # Create component test file
-cat > "$UI_DIR/${COMPONENT_NAME}.spec.tsx" << EOF
+create_file "$UI_DIR/${COMPONENT_NAME}.spec.tsx" "\
 import { describe, it, expect, vi } from 'vitest';
 import { render, screen, fireEvent } from '@testing-library/react';
 import { ${PASCAL_CASE_NAME} } from './${COMPONENT_NAME}';
@@ -493,12 +533,14 @@ EOF
         ;;
 esac
 
-cat >> "$UI_DIR/${COMPONENT_NAME}.spec.tsx" << EOF
+if [ "$DRY_RUN" = false ]; then
+    cat >> "$UI_DIR/${COMPONENT_NAME}.spec.tsx" << EOF
 });
 EOF
+fi
 
 # Create Storybook story file (optional)
-cat > "$UI_DIR/${COMPONENT_NAME}.stories.tsx" << EOF
+create_file "$UI_DIR/${COMPONENT_NAME}.stories.tsx" "\
 import type { Meta, StoryObj } from '@storybook/react';
 import { ${PASCAL_CASE_NAME} } from './${COMPONENT_NAME}';
 
@@ -681,19 +723,33 @@ EOF
 esac
 
 # Update shared/ui index file
-if [ -f "$UI_DIR/index.ts" ]; then
-    echo "export * from './${COMPONENT_NAME}';" >> "$UI_DIR/index.ts"
+if [ "$DRY_RUN" = true ]; then
+    if [ -f "$UI_DIR/index.ts" ]; then
+        echo "Would append to file: $UI_DIR/index.ts"
+    else
+        echo "Would create file: $UI_DIR/index.ts"
+    fi
 else
-    cat > "$UI_DIR/index.ts" << EOF
+    if [ -f "$UI_DIR/index.ts" ]; then
+        echo "export * from './${COMPONENT_NAME}';" >> "$UI_DIR/index.ts"
+    else
+        create_file "$UI_DIR/index.ts" "\
 export * from './${COMPONENT_NAME}';
 EOF
+    fi
 fi
 
 # Create utils file if it doesn't exist
 UTILS_FILE="frontend/src/shared/lib/utils.ts"
-if [ ! -f "$UTILS_FILE" ]; then
-    mkdir -p "$(dirname "$UTILS_FILE")"
-    cat > "$UTILS_FILE" << EOF
+if [ "$DRY_RUN" = true ]; then
+    if [ ! -f "$UTILS_FILE" ]; then
+        echo "Would create file: $UTILS_FILE"
+        echo "Would create or update file: frontend/src/shared/lib/index.ts"
+    fi
+else
+    if [ ! -f "$UTILS_FILE" ]; then
+        mkdir -p "$(dirname "$UTILS_FILE")"
+        cat > "$UTILS_FILE" << EOF
 import { type ClassValue, clsx } from 'clsx';
 import { twMerge } from 'tailwind-merge';
 
@@ -702,23 +758,41 @@ export function cn(...inputs: ClassValue[]) {
 }
 EOF
 
-    # Update lib index file
-    LIB_INDEX="frontend/src/shared/lib/index.ts"
-    if [ -f "$LIB_INDEX" ]; then
-        echo "export * from './utils';" >> "$LIB_INDEX"
-    else
-        cat > "$LIB_INDEX" << EOF
+        # Update lib index file
+        LIB_INDEX="frontend/src/shared/lib/index.ts"
+        if [ -f "$LIB_INDEX" ]; then
+            echo "export * from './utils';" >> "$LIB_INDEX"
+        else
+            cat > "$LIB_INDEX" << EOF
 export * from './api-client';
 export * from './utils';
 EOF
+        fi
     fi
 fi
 
-echo "✅ Shared UI component '${COMPONENT_NAME}' created successfully!"
-echo "📁 Created files:"
-echo "   - $UI_DIR/${COMPONENT_NAME}.tsx"
-echo "   - $UI_DIR/${COMPONENT_NAME}.spec.tsx"
-echo "   - $UI_DIR/${COMPONENT_NAME}.stories.tsx"
+if [ "$DRY_RUN" = true ]; then
+    echo "✅ DRY RUN completed for shared UI component '${COMPONENT_NAME}'"
+    echo "📁 Would create files:"
+    echo "   - $UI_DIR/${COMPONENT_NAME}.tsx"
+    echo "   - $UI_DIR/${COMPONENT_NAME}.spec.tsx"
+    echo "   - $UI_DIR/${COMPONENT_NAME}.stories.tsx"
+    if [ -f "$UI_DIR/index.ts" ]; then
+        echo "   - Update $UI_DIR/index.ts"
+    else
+        echo "   - Create $UI_DIR/index.ts"
+    fi
+    if [ ! -f "$UTILS_FILE" ]; then
+        echo "   - Create $UTILS_FILE"
+        echo "   - Create or update frontend/src/shared/lib/index.ts"
+    fi
+else
+    echo "✅ Shared UI component '${COMPONENT_NAME}' created successfully!"
+    echo "📁 Created files:"
+    echo "   - $UI_DIR/${COMPONENT_NAME}.tsx"
+    echo "   - $UI_DIR/${COMPONENT_NAME}.spec.tsx"
+    echo "   - $UI_DIR/${COMPONENT_NAME}.stories.tsx"
+fi
 echo ""
 echo "Component type: ${COMPONENT_TYPE}"
 echo ""

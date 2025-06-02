@@ -1,30 +1,64 @@
 #!/bin/bash
 
 # Backend Shared Adapter Boilerplate Generator
-# Usage: ./create-shared-adapter.sh <adapter-type> <adapter-name>
+# Usage: ./create-shared-adapter.sh <adapter-type> <adapter-name> [--dry-run]
 
 ADAPTER_TYPE=$1
 ADAPTER_NAME=$2
+DRY_RUN=false
 
-if [ -z "$ADAPTER_TYPE" ] || [ -z "$ADAPTER_NAME" ]; then
-    echo "Usage: $0 <adapter-type> <adapter-name>"
+# Parse arguments
+for arg in "$@"; do
+    case $arg in
+        --dry-run)
+            DRY_RUN=true
+            ;;
+    esac
+done
+
+if [ -z "$ADAPTER_TYPE" ] || [ -z "$ADAPTER_NAME" ] || [ "$ADAPTER_TYPE" = "--dry-run" ]; then
+    echo "Usage: $0 <adapter-type> <adapter-name> [--dry-run]"
     echo "Examples:"
     echo "  $0 db postgres"
     echo "  $0 external stripe-api"
     echo "  $0 external email-service"
+    echo "  $0 db postgres --dry-run"
     exit 1
 fi
 
 # Convert adapter name to PascalCase
 PASCAL_CASE_NAME=$(echo "$ADAPTER_NAME" | sed -r 's/(^|-)([a-z])/\U\2/g')
 
+# Helper function to create files
+create_file() {
+    local file_path=$1
+    local file_content=$2
+    
+    if [ "$DRY_RUN" = true ]; then
+        echo "Would create file: $file_path"
+        return
+    fi
+    
+    cat > "$file_path" << EOF
+$file_content
+EOF
+}
+
 # Create adapter directory
 ADAPTER_DIR="backend/src/shared/adapters/$ADAPTER_TYPE"
-mkdir -p "$ADAPTER_DIR"
+
+if [ "$DRY_RUN" = true ]; then
+    echo "🔍 DRY RUN MODE - No files will be created"
+    echo ""
+    echo "Would create directory: $ADAPTER_DIR"
+    echo ""
+else
+    mkdir -p "$ADAPTER_DIR"
+fi
 
 if [ "$ADAPTER_TYPE" = "db" ]; then
     # Create DB adapter
-    cat > "$ADAPTER_DIR/${ADAPTER_NAME}.ts" << EOF
+    create_file "$ADAPTER_DIR/${ADAPTER_NAME}.ts" "\
 import { depend } from 'velona';
 import { ok, err } from '@fyuuki0jp/railway-result';
 import type { Result } from '@fyuuki0jp/railway-result';
@@ -92,7 +126,7 @@ export const create${PASCAL_CASE_NAME}Adapter = depend(
 EOF
 
     # Create DB adapter test
-    cat > "$ADAPTER_DIR/${ADAPTER_NAME}.spec.ts" << EOF
+    create_file "$ADAPTER_DIR/${ADAPTER_NAME}.spec.ts" "\
 import { describe, it, expect, beforeEach } from 'vitest';
 import { create${PASCAL_CASE_NAME}Adapter } from './${ADAPTER_NAME}';
 import { isErr } from '@fyuuki0jp/railway-result';
@@ -142,7 +176,7 @@ EOF
 
 elif [ "$ADAPTER_TYPE" = "external" ]; then
     # Create external service adapter
-    cat > "$ADAPTER_DIR/${ADAPTER_NAME}.ts" << EOF
+    create_file "$ADAPTER_DIR/${ADAPTER_NAME}.ts" "\
 import { depend } from 'velona';
 import { ok, err } from '@fyuuki0jp/railway-result';
 import type { Result } from '@fyuuki0jp/railway-result';
@@ -205,7 +239,7 @@ export const create${PASCAL_CASE_NAME}Service = depend(
 EOF
 
     # Create external service adapter test
-    cat > "$ADAPTER_DIR/${ADAPTER_NAME}.spec.ts" << EOF
+    create_file "$ADAPTER_DIR/${ADAPTER_NAME}.spec.ts" "\
 import { describe, it, expect, beforeEach, vi } from 'vitest';
 import { create${PASCAL_CASE_NAME}Service } from './${ADAPTER_NAME}';
 import { isErr } from '@fyuuki0jp/railway-result';
@@ -305,20 +339,38 @@ describe('${PASCAL_CASE_NAME} Service', () => {
 EOF
 
     # Update external services index
-    if [ -f "$ADAPTER_DIR/index.ts" ]; then
-        echo "export * from './${ADAPTER_NAME}';" >> "$ADAPTER_DIR/index.ts"
+    if [ "$DRY_RUN" = true ]; then
+        if [ -f "$ADAPTER_DIR/index.ts" ]; then
+            echo "Would append to file: $ADAPTER_DIR/index.ts"
+        else
+            echo "Would create file: $ADAPTER_DIR/index.ts"
+        fi
     else
-        cat > "$ADAPTER_DIR/index.ts" << EOF
+        if [ -f "$ADAPTER_DIR/index.ts" ]; then
+            echo "export * from './${ADAPTER_NAME}';" >> "$ADAPTER_DIR/index.ts"
+        else
+            create_file "$ADAPTER_DIR/index.ts" "\
 export * from './types';
 export * from './${ADAPTER_NAME}';
 EOF
+        fi
     fi
 fi
 
-echo "✅ Backend ${ADAPTER_TYPE} adapter '${PASCAL_CASE_NAME}' created successfully!"
-echo "📁 Created files:"
-echo "   - $ADAPTER_DIR/${ADAPTER_NAME}.ts"
-echo "   - $ADAPTER_DIR/${ADAPTER_NAME}.spec.ts"
+if [ "$DRY_RUN" = true ]; then
+    echo "✅ DRY RUN completed for backend ${ADAPTER_TYPE} adapter '${PASCAL_CASE_NAME}'"
+    echo "📁 Would create files:"
+    echo "   - $ADAPTER_DIR/${ADAPTER_NAME}.ts"
+    echo "   - $ADAPTER_DIR/${ADAPTER_NAME}.spec.ts"
+    if [ "$ADAPTER_TYPE" = "external" ]; then
+        echo "   - Update or create $ADAPTER_DIR/index.ts"
+    fi
+else
+    echo "✅ Backend ${ADAPTER_TYPE} adapter '${PASCAL_CASE_NAME}' created successfully!"
+    echo "📁 Created files:"
+    echo "   - $ADAPTER_DIR/${ADAPTER_NAME}.ts"
+    echo "   - $ADAPTER_DIR/${ADAPTER_NAME}.spec.ts"
+fi
 echo ""
 echo "Next steps:"
 echo "1. Implement the adapter logic in ${ADAPTER_NAME}.ts"

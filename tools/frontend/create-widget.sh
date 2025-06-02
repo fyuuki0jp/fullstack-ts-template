@@ -1,25 +1,62 @@
 #!/bin/bash
 
 # Frontend Widget Boilerplate Generator
-# Usage: ./create-widget.sh <widget-name> [features...]
+# Usage: ./create-widget.sh <widget-name> [features...] [--dry-run]
 
 WIDGET_NAME=$1
 shift
-FEATURES=("$@")
+FEATURES=()
+DRY_RUN=false
 
-if [ -z "$WIDGET_NAME" ]; then
-    echo "Usage: $0 <widget-name> [features...]"
+# Parse arguments
+for arg in "$@"; do
+    case $arg in
+        --dry-run)
+            DRY_RUN=true
+            ;;
+        *)
+            FEATURES+=("$arg")
+            ;;
+    esac
+done
+
+if [ -z "$WIDGET_NAME" ] || [ "$WIDGET_NAME" = "--dry-run" ]; then
+    echo "Usage: $0 <widget-name> [features...] [--dry-run]"
     echo "Example: $0 user-management user"
     echo "Example: $0 dashboard user product order"
+    echo "Example: $0 user-management user --dry-run"
     exit 1
 fi
 
 # Convert widget name to PascalCase
 PASCAL_CASE_NAME=$(echo "$WIDGET_NAME" | sed -r 's/(^|-)([a-z])/\U\2/g')
 
+# Helper function to create files
+create_file() {
+    local file_path=$1
+    local file_content=$2
+    
+    if [ "$DRY_RUN" = true ]; then
+        echo "Would create file: $file_path"
+        return
+    fi
+    
+    cat > "$file_path" << EOF
+$file_content
+EOF
+}
+
 # Create widget directory
 WIDGET_DIR="frontend/src/widgets/$WIDGET_NAME"
-mkdir -p "$WIDGET_DIR"
+
+if [ "$DRY_RUN" = true ]; then
+    echo "🔍 DRY RUN MODE - No files will be created"
+    echo ""
+    echo "Would create directory: $WIDGET_DIR"
+    echo ""
+else
+    mkdir -p "$WIDGET_DIR"
+fi
 
 # Generate imports based on features
 FEATURE_IMPORTS=""
@@ -42,7 +79,7 @@ for feature in "${FEATURES[@]}"; do
 done
 
 # Create widget component
-cat > "$WIDGET_DIR/${WIDGET_NAME}-widget.tsx" << EOF
+create_file "$WIDGET_DIR/${WIDGET_NAME}-widget.tsx" "\
 import { FC } from 'react';
 import { Card } from '@/shared/ui';
 $(echo -e "$FEATURE_IMPORTS")
@@ -63,7 +100,7 @@ export const ${PASCAL_CASE_NAME}Widget: FC<${PASCAL_CASE_NAME}WidgetProps> = ({ 
 EOF
 
 # Create alternative layout widget
-cat > "$WIDGET_DIR/${WIDGET_NAME}-tabs-widget.tsx" << EOF
+create_file "$WIDGET_DIR/${WIDGET_NAME}-tabs-widget.tsx" "\
 import { FC, useState } from 'react';
 import { Card, Button } from '@/shared/ui';
 $(echo -e "$FEATURE_IMPORTS")
@@ -130,7 +167,7 @@ cat >> "$WIDGET_DIR/${WIDGET_NAME}-tabs-widget.tsx" << EOF
 EOF
 
 # Create widget test file
-cat > "$WIDGET_DIR/${WIDGET_NAME}-widget.spec.tsx" << EOF
+create_file "$WIDGET_DIR/${WIDGET_NAME}-widget.spec.tsx" "\
 import { describe, it, expect, vi } from 'vitest';
 import { render, screen } from '@testing-library/react';
 import { ${PASCAL_CASE_NAME}Widget } from './${WIDGET_NAME}-widget';
@@ -187,7 +224,7 @@ cat >> "$WIDGET_DIR/${WIDGET_NAME}-widget.spec.tsx" << EOF
 EOF
 
 # Create tabs widget test file
-cat > "$WIDGET_DIR/${WIDGET_NAME}-tabs-widget.spec.tsx" << EOF
+create_file "$WIDGET_DIR/${WIDGET_NAME}-tabs-widget.spec.tsx" "\
 import { describe, it, expect, vi } from 'vitest';
 import { render, screen, fireEvent } from '@testing-library/react';
 import { ${PASCAL_CASE_NAME}TabsWidget } from './${WIDGET_NAME}-tabs-widget';
@@ -251,23 +288,35 @@ if [ ${#FEATURES[@]} -gt 1 ]; then
 EOF
 fi
 
-cat >> "$WIDGET_DIR/${WIDGET_NAME}-tabs-widget.spec.tsx" << EOF
+if [ "$DRY_RUN" = false ]; then
+    cat >> "$WIDGET_DIR/${WIDGET_NAME}-tabs-widget.spec.tsx" << EOF
   });
 });
 EOF
+fi
 
 # Create widget index file
-cat > "$WIDGET_DIR/index.ts" << EOF
+create_file "$WIDGET_DIR/index.ts" "\
 export * from './${WIDGET_NAME}-widget';
 export * from './${WIDGET_NAME}-tabs-widget';
 EOF
 
-echo "✅ Frontend widget '${WIDGET_NAME}' created successfully!"
-echo "📁 Created in: $WIDGET_DIR"
-echo ""
-echo "Created components:"
-echo "  - ${PASCAL_CASE_NAME}Widget (default layout)"
-echo "  - ${PASCAL_CASE_NAME}TabsWidget (tabbed layout)"
+if [ "$DRY_RUN" = true ]; then
+    echo "✅ DRY RUN completed for frontend widget '${WIDGET_NAME}'"
+    echo "📁 Would create in: $WIDGET_DIR"
+    echo ""
+    echo "Would create components:"
+    echo "  - ${PASCAL_CASE_NAME}Widget (default layout)"
+    echo "  - ${PASCAL_CASE_NAME}TabsWidget (tabbed layout)"
+    echo "  - Test suites for both components"
+else
+    echo "✅ Frontend widget '${WIDGET_NAME}' created successfully!"
+    echo "📁 Created in: $WIDGET_DIR"
+    echo ""
+    echo "Created components:"
+    echo "  - ${PASCAL_CASE_NAME}Widget (default layout)"
+    echo "  - ${PASCAL_CASE_NAME}TabsWidget (tabbed layout)"
+fi
 echo ""
 echo "Next steps:"
 echo "1. Make sure the required features exist:"

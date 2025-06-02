@@ -17,7 +17,14 @@
     "lint": "yarn workspaces run lint",
     "typecheck": "yarn workspaces run typecheck",
     "format": "prettier --write .",
-    "format:check": "prettier --check ."
+    "format:check": "prettier --check .",
+    "create:backend:entity": "./tools/backend/create-entity.sh",
+    "create:backend:feature": "./tools/backend/create-feature.sh",
+    "create:backend:adapter": "./tools/backend/create-shared-adapter.sh",
+    "create:frontend:feature": "./tools/frontend/create-feature.sh",
+    "create:frontend:page": "./tools/frontend/create-page.sh",
+    "create:frontend:ui": "./tools/frontend/create-shared-ui.sh",
+    "create:frontend:widget": "./tools/frontend/create-widget.sh"
   },
   "devDependencies": {
     "@playwright/test": "^1.52.0",

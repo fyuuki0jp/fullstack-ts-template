@@ -1,37 +1,85 @@
 #!/bin/bash
 
 # Backend Feature Boilerplate Generator
-# Usage: ./create-feature.sh <feature-name> [entity-name]
+# Usage: ./create-feature.sh <feature-name> [entity-name] [--dry-run]
 
 FEATURE_NAME=$1
 ENTITY_NAME=${2:-$1}  # Use feature name as entity name if not provided
+DRY_RUN=false
 
-if [ -z "$FEATURE_NAME" ]; then
-    echo "Usage: $0 <feature-name> [entity-name]"
+# Parse arguments
+for arg in "$@"; do
+    case $arg in
+        --dry-run)
+            DRY_RUN=true
+            ;;
+    esac
+done
+
+# Handle if --dry-run is the second parameter
+if [ "$2" = "--dry-run" ]; then
+    ENTITY_NAME=$1
+    DRY_RUN=true
+fi
+
+if [ -z "$FEATURE_NAME" ] || [ "$FEATURE_NAME" = "--dry-run" ]; then
+    echo "Usage: $0 <feature-name> [entity-name] [--dry-run]"
     echo "Example: $0 product-management product"
     echo "Example: $0 user"
+    echo "Example: $0 user --dry-run"
     exit 1
 fi
 
 # Convert entity name to PascalCase
 PASCAL_CASE_NAME=$(echo "$ENTITY_NAME" | sed -r 's/(^|-)([a-z])/\U\2/g')
 
+# Helper function to create files
+create_file() {
+    local file_path=$1
+    local file_content=$2
+    
+    if [ "$DRY_RUN" = true ]; then
+        echo "Would create file: $file_path"
+        return
+    fi
+    
+    cat > "$file_path" << EOF
+$file_content
+EOF
+}
+
 # Create feature directory structure
 FEATURE_DIR="backend/src/features/$FEATURE_NAME"
-mkdir -p "$FEATURE_DIR/api"
-mkdir -p "$FEATURE_DIR/commands"
-mkdir -p "$FEATURE_DIR/queries"
-mkdir -p "$FEATURE_DIR/domain"
+
+if [ "$DRY_RUN" = true ]; then
+    echo "🔍 DRY RUN MODE - No files will be created"
+    echo ""
+    echo "Would create directories:"
+    echo "  - $FEATURE_DIR/api"
+    echo "  - $FEATURE_DIR/commands"
+    echo "  - $FEATURE_DIR/queries"
+    echo "  - $FEATURE_DIR/domain"
+    echo ""
+else
+    mkdir -p "$FEATURE_DIR/api"
+    mkdir -p "$FEATURE_DIR/commands"
+    mkdir -p "$FEATURE_DIR/queries"
+    mkdir -p "$FEATURE_DIR/domain"
+fi
 
 # Check if entity exists
 ENTITY_FILE="backend/src/entities/${ENTITY_NAME}.ts"
 if [ ! -f "$ENTITY_FILE" ]; then
     echo "⚠️  Entity '${ENTITY_NAME}' not found. Creating it first..."
-    ./tools/backend/create-entity.sh "$ENTITY_NAME"
+    if [ "$DRY_RUN" = true ]; then
+        ./tools/backend/create-entity.sh "$ENTITY_NAME" --dry-run
+    else
+        ./tools/backend/create-entity.sh "$ENTITY_NAME"
+    fi
 fi
 
 # Create repository interface
-cat > "$FEATURE_DIR/domain/repository.ts" << EOF
+create_file "$FEATURE_DIR/domain/repository.ts" "\
 import type { Result } from '@fyuuki0jp/railway-result';
 import type { ${PASCAL_CASE_NAME}, Create${PASCAL_CASE_NAME}Input, Update${PASCAL_CASE_NAME}Input } from '../../../entities/${ENTITY_NAME}';
 
@@ -45,7 +93,7 @@ export interface ${PASCAL_CASE_NAME}Repository {
 EOF
 
 # Create repository implementation
-cat > "$FEATURE_DIR/domain/${ENTITY_NAME}-repository-impl.ts" << EOF
+create_file "$FEATURE_DIR/domain/${ENTITY_NAME}-repository-impl.ts" "\
 import { depend } from 'velona';
 import { ok, err } from '@fyuuki0jp/railway-result';
 import type { Result } from '@fyuuki0jp/railway-result';
@@ -158,7 +206,7 @@ export const ${ENTITY_NAME}RepositoryImpl = depend(
 EOF
 
 # Create repository implementation test
-cat > "$FEATURE_DIR/domain/${ENTITY_NAME}-repository-impl.spec.ts" << EOF
+create_file "$FEATURE_DIR/domain/${ENTITY_NAME}-repository-impl.spec.ts" "\
 import { describe, it, expect, beforeEach } from 'vitest';
 import { ${ENTITY_NAME}RepositoryImpl } from './${ENTITY_NAME}-repository-impl';
 import { MockDbAdapter } from '../../../shared/adapters/db/mock';
@@ -311,7 +359,7 @@ describe('${PASCAL_CASE_NAME}RepositoryImpl', () => {
 EOF
 
 # Create command - create
-cat > "$FEATURE_DIR/commands/create-${ENTITY_NAME}.ts" << EOF
+create_file "$FEATURE_DIR/commands/create-${ENTITY_NAME}.ts" "\
 import { depend } from 'velona';
 import { err } from '@fyuuki0jp/railway-result';
 import type { Result } from '@fyuuki0jp/railway-result';
@@ -345,7 +393,7 @@ export const create${PASCAL_CASE_NAME} = depend(
 EOF
 
 # Create command test
-cat > "$FEATURE_DIR/commands/create-${ENTITY_NAME}.spec.ts" << EOF
+create_file "$FEATURE_DIR/commands/create-${ENTITY_NAME}.spec.ts" "\
 import { describe, it, expect, beforeEach, vi } from 'vitest';
 import { create${PASCAL_CASE_NAME} } from './create-${ENTITY_NAME}';
 import { ok, err, isErr } from '@fyuuki0jp/railway-result';
@@ -443,7 +491,7 @@ describe('create${PASCAL_CASE_NAME}', () => {
 EOF
 
 # Create command - update
-cat > "$FEATURE_DIR/commands/update-${ENTITY_NAME}.ts" << EOF
+create_file "$FEATURE_DIR/commands/update-${ENTITY_NAME}.ts" "\
 import { depend } from 'velona';
 import { err } from '@fyuuki0jp/railway-result';
 import type { Result } from '@fyuuki0jp/railway-result';
@@ -479,7 +527,7 @@ export const update${PASCAL_CASE_NAME} = depend(
 EOF
 
 # Create command - delete
-cat > "$FEATURE_DIR/commands/delete-${ENTITY_NAME}.ts" << EOF
+create_file "$FEATURE_DIR/commands/delete-${ENTITY_NAME}.ts" "\
 import { depend } from 'velona';
 import { err, isErr } from '@fyuuki0jp/railway-result';
 import type { Result } from '@fyuuki0jp/railway-result';
@@ -505,7 +553,7 @@ export const delete${PASCAL_CASE_NAME} = depend(
 EOF
 
 # Create query - get all
-cat > "$FEATURE_DIR/queries/get-${ENTITY_NAME}s.ts" << EOF
+create_file "$FEATURE_DIR/queries/get-${ENTITY_NAME}s.ts" "\
 import { depend } from 'velona';
 import type { Result } from '@fyuuki0jp/railway-result';
 import type { ${PASCAL_CASE_NAME}Repository } from '../domain/repository';
@@ -521,7 +569,7 @@ export const get${PASCAL_CASE_NAME}s = depend(
 EOF
 
 # Create query - get by id
-cat > "$FEATURE_DIR/queries/get-${ENTITY_NAME}-by-id.ts" << EOF
+create_file "$FEATURE_DIR/queries/get-${ENTITY_NAME}-by-id.ts" "\
 import { depend } from 'velona';
 import { err, isErr } from '@fyuuki0jp/railway-result';
 import type { Result } from '@fyuuki0jp/railway-result';
@@ -548,7 +596,7 @@ export const get${PASCAL_CASE_NAME}ById = depend(
 EOF
 
 # Create query test
-cat > "$FEATURE_DIR/queries/get-${ENTITY_NAME}s.spec.ts" << EOF
+create_file "$FEATURE_DIR/queries/get-${ENTITY_NAME}s.spec.ts" "\
 import { describe, it, expect, beforeEach, vi } from 'vitest';
 import { get${PASCAL_CASE_NAME}s } from './get-${ENTITY_NAME}s';
 import { ok, err } from '@fyuuki0jp/railway-result';
@@ -610,7 +658,7 @@ describe('get${PASCAL_CASE_NAME}s', () => {
 EOF
 
 # Create API routes
-cat > "$FEATURE_DIR/api/routes.ts" << EOF
+create_file "$FEATURE_DIR/api/routes.ts" "\
 import { Hono } from 'hono';
 import { isErr } from '@fyuuki0jp/railway-result';
 import { create${PASCAL_CASE_NAME} } from '../commands/create-${ENTITY_NAME}';
@@ -722,7 +770,7 @@ function determineStatusCode(errorMessage: string): number {
 EOF
 
 # Create API routes test
-cat > "$FEATURE_DIR/api/routes.spec.ts" << EOF
+create_file "$FEATURE_DIR/api/routes.spec.ts" "\
 import { describe, it, expect, beforeEach } from 'vitest';
 import { Hono } from 'hono';
 import create${PASCAL_CASE_NAME}Routes from './routes';
@@ -910,8 +958,20 @@ describe('${PASCAL_CASE_NAME} API Routes', () => {
 });
 EOF
 
-echo "✅ Backend feature '${FEATURE_NAME}' created successfully!"
-echo "📁 Created in: $FEATURE_DIR"
+if [ "$DRY_RUN" = true ]; then
+    echo "✅ DRY RUN completed for backend feature '${FEATURE_NAME}'"
+    echo "📁 Would create in: $FEATURE_DIR"
+    echo ""
+    echo "Would create:"
+    echo "  - Repository interface and implementation"
+    echo "  - Commands: create, update, delete"
+    echo "  - Queries: get all, get by id"
+    echo "  - API routes with full CRUD operations"
+    echo "  - Complete test suites for all components"
+else
+    echo "✅ Backend feature '${FEATURE_NAME}' created successfully!"
+    echo "📁 Created in: $FEATURE_DIR"
+fi
 echo ""
 echo "Next steps:"
 echo "1. Create the database table for ${ENTITY_NAME}s:"
