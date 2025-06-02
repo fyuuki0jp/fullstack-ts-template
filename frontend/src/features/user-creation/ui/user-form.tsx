@@ -21,7 +21,7 @@ export const UserForm: FC<UserFormProps> = ({ onSuccess }) => {
       setNameError('');
       return true;
     }
-    
+
     setEmailError(validation.errors?.email || '');
     setNameError(validation.errors?.name || '');
     return false;

@@ -13,7 +13,10 @@ export type { UserId, Email, UserName };
 export type { CreateUserInput } from '../../../../backend/src/entities/user';
 
 // Frontend User type with ISO string dates (transformed from backend Date objects)
-export type User = Omit<BackendUser, 'createdAt' | 'updatedAt' | 'deletedAt'> & {
+export type User = Omit<
+  BackendUser,
+  'createdAt' | 'updatedAt' | 'deletedAt'
+> & {
   createdAt: string;
   updatedAt: string;
   deletedAt: string | null;
@@ -31,8 +34,18 @@ const _FrontendUserSchema = z.object({
 
 // Frontend input schema (same as backend)
 const _CreateUserInputSchema = z.object({
-  email: z.string().trim().min(1, 'Email is required').email('Invalid email format').brand<'Email'>(),
-  name: z.string().trim().min(1, 'Name is required').max(100, 'Name must be 100 characters or less').brand<'UserName'>(),
+  email: z
+    .string()
+    .trim()
+    .min(1, 'Email is required')
+    .email('Invalid email format')
+    .brand<'Email'>(),
+  name: z
+    .string()
+    .trim()
+    .min(1, 'Name is required')
+    .max(100, 'Name must be 100 characters or less')
+    .brand<'UserName'>(),
 });
 
 // Validation helpers
@@ -68,7 +81,9 @@ export const validateCreateUserInputWithErrors = (data: unknown) => {
 };
 
 // Utility to transform backend User (with Date objects) to frontend User (with ISO strings)
-export const transformBackendUserToFrontend = (backendUser: BackendUser): User => ({
+export const transformBackendUserToFrontend = (
+  backendUser: BackendUser
+): User => ({
   ...backendUser,
   createdAt: backendUser.createdAt.toISOString(),
   updatedAt: backendUser.updatedAt.toISOString(),

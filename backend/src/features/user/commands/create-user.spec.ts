@@ -23,9 +23,9 @@ describe('createUser command', () => {
       name: 'Test User',
     };
     const createdUser: User = {
-      id: '550e8400-e29b-41d4-a716-446655440001' as any,
-      email: input.email as any,
-      name: input.name as any,
+      id: '550e8400-e29b-41d4-a716-446655440001' as User['id'],
+      email: input.email as User['email'],
+      name: input.name as User['name'],
       createdAt: new Date(),
       updatedAt: new Date(),
       deletedAt: null,
@@ -98,9 +98,9 @@ describe('createUser command', () => {
     for (const email of validEmails) {
       vi.mocked(mockUserRepo.create).mockResolvedValue(
         ok({
-          id: '550e8400-e29b-41d4-a716-446655440001' as any,
-          email: email as any,
-          name: 'Test User' as any,
+          id: '550e8400-e29b-41d4-a716-446655440001' as User['id'],
+          email: email as User['email'],
+          name: 'Test User' as User['name'],
           createdAt: new Date(),
           updatedAt: new Date(),
           deletedAt: null,
@@ -162,9 +162,9 @@ describe('createUser command', () => {
     };
 
     const expectedUser: User = {
-      id: '550e8400-e29b-41d4-a716-446655440001' as any,
-      email: 'test@example.com' as any,
-      name: 'Test User' as any,
+      id: '550e8400-e29b-41d4-a716-446655440001' as User['id'],
+      email: 'test@example.com' as User['email'],
+      name: 'Test User' as User['name'],
       createdAt: new Date(),
       updatedAt: new Date(),
       deletedAt: null,
@@ -206,7 +206,9 @@ describe('createUser command', () => {
 
     expect(isErr(result)).toBe(true);
     if (isErr(result)) {
-      expect(result.error.message).toContain('Name must be 100 characters or less');
+      expect(result.error.message).toContain(
+        'Name must be 100 characters or less'
+      );
     }
     expect(mockUserRepo.create).not.toHaveBeenCalled();
   });

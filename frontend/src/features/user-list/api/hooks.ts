@@ -20,11 +20,11 @@ export const useUsers = () => {
         const validatedUsers = data.users
           .map(validateUser)
           .filter((user) => user !== null);
-        
+
         if (validatedUsers.length !== data.users.length) {
           throw new Error('Some user data received from server is invalid');
         }
-        
+
         return { users: validatedUsers };
       }
       throw new Error('Invalid response format');

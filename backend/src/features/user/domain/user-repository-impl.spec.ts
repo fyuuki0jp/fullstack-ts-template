@@ -91,7 +91,9 @@ describe('UserRepositoryImpl', () => {
     it('should return null when user not found', async () => {
       mockDb.setData('users', []);
 
-      const result = await userRepo.findById('550e8400-e29b-41d4-a716-446655440004' as EntityId);
+      const result = await userRepo.findById(
+        '550e8400-e29b-41d4-a716-446655440004' as EntityId
+      );
 
       expect(result.success).toBe(true);
       if (result.success) {
@@ -102,7 +104,9 @@ describe('UserRepositoryImpl', () => {
     it('should handle database errors', async () => {
       mockDb.mockFailure('Query failed');
 
-      const result = await userRepo.findById('550e8400-e29b-41d4-a716-446655440005' as EntityId);
+      const result = await userRepo.findById(
+        '550e8400-e29b-41d4-a716-446655440005' as EntityId
+      );
 
       expect(isErr(result)).toBe(true);
       if (isErr(result)) {

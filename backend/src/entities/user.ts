@@ -40,6 +40,10 @@ const _CreateUserInputSchema = z.object({
 
 export type CreateUserInput = z.infer<typeof _CreateUserInputSchema>;
 
+// Export schemas for frontend use
+export const UserSchema = _UserSchema;
+export const CreateUserInputSchema = _CreateUserInputSchema;
+
 // Domain helper functions for validation (minimal export)
 export const validateUser = (data: unknown): Result<User, Error> => {
   const result = _UserSchema.safeParse(data);

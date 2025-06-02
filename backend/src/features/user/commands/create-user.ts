@@ -1,7 +1,7 @@
 import { depend } from 'velona';
-import { err, isErr } from '@fyuuki0jp/railway-result';
+import { isErr } from '@fyuuki0jp/railway-result';
 import type { Result } from '@fyuuki0jp/railway-result';
-import { type User, type CreateUserInput, validateCreateUserInput } from '../../../entities';
+import { type User, validateCreateUserInput } from '../../../entities';
 import type { UserRepository } from '../domain/repository';
 
 export const createUser = depend(

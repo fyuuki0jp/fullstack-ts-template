@@ -74,7 +74,7 @@ export const userRepositoryImpl = depend({ db: {} as DbAdapter }, ({ db }) => ({
         updatedAt: new Date(row.updated_at),
         deletedAt: row.deleted_at ? new Date(row.deleted_at) : null,
       });
-      
+
       if (isErr(userResult)) {
         return err(
           new Error(
