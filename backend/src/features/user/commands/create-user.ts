@@ -3,34 +3,27 @@ import { err } from '@fyuuki0jp/railway-result';
 import type { Result } from '@fyuuki0jp/railway-result';
 import type { User } from '../../../entities';
 import type { UserRepository } from '../domain/repository';
-
-export interface CreateUserInput {
-  email: string;
-  name: string;
-}
+import { createUserSchema, type CreateUserInput } from '../../../shared/schemas';
 
 export const createUser = depend(
   { userRepository: {} as UserRepository },
   ({ userRepository }) =>
-    async (input: CreateUserInput): Promise<Result<User, Error>> => {
-      // Trim input
-      const email = input.email?.trim() || '';
-      const name = input.name?.trim() || '';
-
-      // Validate input
-      if (!email || !name) {
-        return err(new Error('Email and name are required'));
+    async (input: unknown): Promise<Result<User, Error>> => {
+      // Validate input with Zod schema
+      const validation = createUserSchema.safeParse(input);
+      if (!validation.success) {
+        const errorMessage = validation.error.errors
+          .map((err) => err.message)
+          .join(', ');
+        return err(new Error(errorMessage));
       }
 
-      // Basic email validation
-      if (!email.includes('@') || email.split('@').length !== 2) {
-        return err(new Error('Invalid email format'));
-      }
+      const validatedInput = validation.data;
 
       // Create user
       return userRepository.create({
-        email,
-        name,
+        email: validatedInput.email,
+        name: validatedInput.name,
       });
     }
 );

@@ -65,7 +65,7 @@ describe('createUser command', () => {
 
     expect(isErr(result)).toBe(true);
     if (isErr(result)) {
-      expect(result.error.message).toBe('Email and name are required');
+      expect(result.error.message).toContain('Email is required');
     }
     expect(mockUserRepo.create).not.toHaveBeenCalled();
   });
@@ -175,5 +175,66 @@ describe('createUser command', () => {
       email: 'test@example.com',
       name: 'Test User',
     });
+  });
+
+  it('should validate empty name', async () => {
+    const input = {
+      email: 'test@example.com',
+      name: '',
+    };
+
+    const result = await createUserCmd()(input);
+
+    expect(isErr(result)).toBe(true);
+    if (isErr(result)) {
+      expect(result.error.message).toBe('Name is required');
+    }
+    expect(mockUserRepo.create).not.toHaveBeenCalled();
+  });
+
+  it('should validate name length', async () => {
+    const input = {
+      email: 'test@example.com',
+      name: 'a'.repeat(101), // 101 characters
+    };
+
+    const result = await createUserCmd()(input);
+
+    expect(isErr(result)).toBe(true);
+    if (isErr(result)) {
+      expect(result.error.message).toBe('Name must be 100 characters or less');
+    }
+    expect(mockUserRepo.create).not.toHaveBeenCalled();
+  });
+
+  it('should handle multiple validation errors', async () => {
+    const input = {
+      email: 'invalid-email',
+      name: '',
+    };
+
+    const result = await createUserCmd()(input);
+
+    expect(isErr(result)).toBe(true);
+    if (isErr(result)) {
+      expect(result.error.message).toContain('Invalid email format');
+      expect(result.error.message).toContain('Name is required');
+    }
+    expect(mockUserRepo.create).not.toHaveBeenCalled();
+  });
+
+  it('should handle invalid input types', async () => {
+    const input = {
+      email: 123,
+      name: true,
+    };
+
+    const result = await createUserCmd()(input);
+
+    expect(isErr(result)).toBe(true);
+    if (isErr(result)) {
+      expect(result.error.message).toContain('Expected string');
+    }
+    expect(mockUserRepo.create).not.toHaveBeenCalled();
   });
 });

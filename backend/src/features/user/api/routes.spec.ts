@@ -128,7 +128,7 @@ describe('User API Routes', () => {
 
       expect(res.status).toBe(400);
       const data = await res.json();
-      expect(data.error).toBe('Email and name are required');
+      expect(data.error).toContain('Required');
     });
 
     it('should handle missing name field', async () => {
@@ -146,7 +146,7 @@ describe('User API Routes', () => {
 
       expect(res.status).toBe(400);
       const data = await res.json();
-      expect(data.error).toContain('name');
+      expect(data.error).toContain('Required');
     });
 
     it('should handle duplicate email', async () => {
@@ -230,6 +230,45 @@ describe('User API Routes', () => {
       const data = await res.json();
       expect(data.user.email).toBe('test@example.com');
       expect(data.user.name).toBe('Test User');
+    });
+
+    it('should validate name length', async () => {
+      const userData = {
+        email: 'test@example.com',
+        name: 'a'.repeat(101), // 101 characters
+      };
+
+      const res = await app.request('/', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify(userData),
+      });
+
+      expect(res.status).toBe(400);
+      const data = await res.json();
+      expect(data.error).toContain('100 characters or less');
+    });
+
+    it('should handle multiple validation errors', async () => {
+      const userData = {
+        email: 'invalid-email',
+        name: '',
+      };
+
+      const res = await app.request('/', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify(userData),
+      });
+
+      expect(res.status).toBe(400);
+      const data = await res.json();
+      expect(data.error).toContain('Invalid email format');
+      expect(data.error).toContain('Name is required');
     });
   });
 });
