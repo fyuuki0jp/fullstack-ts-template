@@ -2,7 +2,7 @@ import { describe, it, expect, beforeEach, vi } from 'vitest';
 import { getUsers } from './get-users';
 import { ok, err, isErr } from '@fyuuki0jp/railway-result';
 import type { UserRepository } from '../domain/repository';
-import type { User } from '../../../entities';
+import type { User, UserId, Email, UserName } from '../../../entities';
 
 describe('getUsers query', () => {
   let mockUserRepo: UserRepository;
@@ -20,18 +20,20 @@ describe('getUsers query', () => {
   it('should return all users from repository', async () => {
     const users: User[] = [
       {
-        id: '1',
-        email: 'user1@example.com',
-        name: 'User 1',
+        id: '550e8400-e29b-41d4-a716-446655440001' as UserId,
+        email: 'user1@example.com' as Email,
+        name: 'User 1' as UserName,
         createdAt: new Date('2023-01-01'),
         updatedAt: new Date('2023-01-01'),
+        deletedAt: null,
       },
       {
-        id: '2',
-        email: 'user2@example.com',
-        name: 'User 2',
+        id: '550e8400-e29b-41d4-a716-446655440002' as UserId,
+        email: 'user2@example.com' as Email,
+        name: 'User 2' as UserName,
         createdAt: new Date('2023-01-02'),
         updatedAt: new Date('2023-01-02'),
+        deletedAt: null,
       },
     ];
 
@@ -77,11 +79,12 @@ describe('getUsers query', () => {
   it('should not modify the returned users', async () => {
     const users: User[] = [
       {
-        id: '1',
-        email: 'user1@example.com',
-        name: 'User 1',
+        id: '550e8400-e29b-41d4-a716-446655440003' as UserId,
+        email: 'user1@example.com' as Email,
+        name: 'User 1' as UserName,
         createdAt: new Date('2023-01-01'),
         updatedAt: new Date('2023-01-01'),
+        deletedAt: null,
       },
     ];
 
@@ -99,11 +102,12 @@ describe('getUsers query', () => {
   it('should be a pure query with no side effects', async () => {
     const users: User[] = [
       {
-        id: '1',
-        email: 'user@example.com',
-        name: 'User',
+        id: '550e8400-e29b-41d4-a716-446655440004' as UserId,
+        email: 'user@example.com' as Email,
+        name: 'User' as UserName,
         createdAt: new Date(),
         updatedAt: new Date(),
+        deletedAt: null,
       },
     ];
 

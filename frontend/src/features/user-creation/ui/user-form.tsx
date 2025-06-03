@@ -2,6 +2,7 @@ import { FC, FormEvent, useState } from 'react';
 import { Button, Input } from '@/shared/ui';
 import { useCreateUser } from '../api';
 import { validateCreateUserInputWithErrors } from '@/shared/types/user';
+import type { CreateUserInput } from '@/shared/types/user';
 
 interface UserFormProps {
   onSuccess?: () => void;
@@ -14,17 +15,17 @@ export const UserForm: FC<UserFormProps> = ({ onSuccess }) => {
   const [nameError, setNameError] = useState('');
   const { mutate: createUser, isPending, error } = useCreateUser();
 
-  const validateForm = () => {
+  const validateForm = (): CreateUserInput | null => {
     const validation = validateCreateUserInputWithErrors({ email, name });
     if (validation.success) {
       setEmailError('');
       setNameError('');
-      return true;
+      return validation.data;
     }
 
     setEmailError(validation.errors?.email || '');
     setNameError(validation.errors?.name || '');
-    return false;
+    return null;
   };
 
   const handleEmailChange = (value: string) => {
@@ -45,12 +46,13 @@ export const UserForm: FC<UserFormProps> = ({ onSuccess }) => {
     e.preventDefault();
 
     // Validate form with zod
-    if (!validateForm()) {
+    const validatedInput = validateForm();
+    if (!validatedInput) {
       return;
     }
 
     createUser(
-      { email, name },
+      validatedInput,
       {
         onSuccess: () => {
           setEmail('');

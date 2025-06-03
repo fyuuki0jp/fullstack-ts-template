@@ -2,7 +2,7 @@ import { describe, it, expect, beforeEach } from 'vitest';
 import { userRepositoryImpl } from './user-repository-impl';
 import { MockDbAdapter } from '../../../shared/adapters/db/mock';
 import { isErr } from '@fyuuki0jp/railway-result';
-import type { EntityId } from '../../../entities/types';
+import type { UserId, Email, UserName } from '../../../entities/user';
 
 describe('UserRepositoryImpl', () => {
   let mockDb: MockDbAdapter;
@@ -68,7 +68,7 @@ describe('UserRepositoryImpl', () => {
 
   describe('findById', () => {
     it('should find user by id', async () => {
-      const userId = '550e8400-e29b-41d4-a716-446655440003' as EntityId;
+      const userId = '550e8400-e29b-41d4-a716-446655440003' as UserId;
       const user = {
         id: userId,
         email: 'test@example.com',
@@ -92,7 +92,7 @@ describe('UserRepositoryImpl', () => {
       mockDb.setData('users', []);
 
       const result = await userRepo.findById(
-        '550e8400-e29b-41d4-a716-446655440004' as EntityId
+        '550e8400-e29b-41d4-a716-446655440004' as UserId
       );
 
       expect(result.success).toBe(true);
@@ -105,7 +105,7 @@ describe('UserRepositoryImpl', () => {
       mockDb.mockFailure('Query failed');
 
       const result = await userRepo.findById(
-        '550e8400-e29b-41d4-a716-446655440005' as EntityId
+        '550e8400-e29b-41d4-a716-446655440005' as UserId
       );
 
       expect(isErr(result)).toBe(true);
@@ -122,7 +122,10 @@ describe('UserRepositoryImpl', () => {
         name: 'New User',
       };
 
-      const result = await userRepo.create(input);
+      const result = await userRepo.create({
+        email: input.email as Email,
+        name: input.name as UserName,
+      });
 
       expect(result.success).toBe(true);
       if (result.success) {
@@ -143,8 +146,8 @@ describe('UserRepositoryImpl', () => {
       mockDb.mockFailure('Insert failed');
 
       const result = await userRepo.create({
-        email: 'test@example.com',
-        name: 'Test User',
+        email: 'test@example.com' as Email,
+        name: 'Test User' as UserName,
       });
 
       expect(isErr(result)).toBe(true);
@@ -166,8 +169,8 @@ describe('UserRepositoryImpl', () => {
       ]);
 
       const result = await userRepo.create({
-        email: 'existing@example.com',
-        name: 'Another User',
+        email: 'existing@example.com' as Email,
+        name: 'Another User' as UserName,
       });
 
       expect(isErr(result)).toBe(true);
@@ -179,7 +182,7 @@ describe('UserRepositoryImpl', () => {
 
   describe('transformToEntity', () => {
     it('should transform database row to User entity', async () => {
-      const userId = '550e8400-e29b-41d4-a716-446655440007' as EntityId;
+      const userId = '550e8400-e29b-41d4-a716-446655440007' as UserId;
       const dbRow = {
         id: userId,
         email: 'test@example.com',

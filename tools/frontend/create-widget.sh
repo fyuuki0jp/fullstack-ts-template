@@ -85,7 +85,7 @@ import { Card } from '@/shared/ui';
 $(echo -e "$FEATURE_IMPORTS")
 interface ${PASCAL_CASE_NAME}WidgetProps {
   className?: string;
-}
+}"
 
 export const ${PASCAL_CASE_NAME}Widget: FC<${PASCAL_CASE_NAME}WidgetProps> = ({ className }) => {
   return (
