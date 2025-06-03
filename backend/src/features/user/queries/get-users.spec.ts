@@ -33,14 +33,14 @@ describe('getUsers query', () => {
     expect(result.success).toBe(true);
     if (result.success) {
       expect(result.data.length).toBeGreaterThanOrEqual(2);
-      
+
       // Check users are present (order might vary)
-      const emails = result.data.map(u => u.email);
+      const emails = result.data.map((u) => u.email);
       expect(emails).toContain('user1@example.com');
       expect(emails).toContain('user2@example.com');
-      
+
       // Check that all required fields are present
-      result.data.forEach(user => {
+      result.data.forEach((user) => {
         expect(user.id).toBeDefined();
         expect(user.createdAt).toBeInstanceOf(Date);
         expect(user.updatedAt).toBeInstanceOf(Date);
@@ -53,7 +53,7 @@ describe('getUsers query', () => {
     // Create a new test instance for isolation
     const isolatedSetup = await setupTestDatabase();
     const isolatedGetUsers = getUsers.inject({ db: isolatedSetup.db });
-    
+
     const result = await isolatedGetUsers()();
 
     expect(result.success).toBe(true);
@@ -61,7 +61,7 @@ describe('getUsers query', () => {
       expect(result.data).toEqual([]);
       expect(result.data).toHaveLength(0);
     }
-    
+
     await isolatedSetup.client.close();
   });
 
@@ -98,16 +98,16 @@ describe('getUsers query', () => {
 
     expect(result1.success).toBe(true);
     expect(result2.success).toBe(true);
-    
+
     if (result1.success && result2.success) {
       expect(result1.data.length).toBeGreaterThanOrEqual(3);
       expect(result2.data.length).toBe(result1.data.length);
-      
+
       // Check that the order is consistent between calls
-      const emails1 = result1.data.map(user => user.email);
-      const emails2 = result2.data.map(user => user.email);
+      const emails1 = result1.data.map((user) => user.email);
+      const emails2 = result2.data.map((user) => user.email);
       expect(emails1).toEqual(emails2);
-      
+
       // Check all users are present
       expect(emails1).toContain('user3@example.com');
       expect(emails1).toContain('user4@example.com');

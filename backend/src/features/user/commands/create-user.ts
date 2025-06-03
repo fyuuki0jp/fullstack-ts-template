@@ -1,7 +1,11 @@
 import { depend } from 'velona';
 import { isErr } from '@fyuuki0jp/railway-result';
 import type { Result } from '@fyuuki0jp/railway-result';
-import { type User, UserEntity, validateCreateUserInput } from '../../../entities';
+import {
+  type User,
+  UserEntity,
+  validateCreateUserInput,
+} from '../../../entities';
 import type { DrizzleDb } from '../../../shared/adapters/db/pglite';
 
 export const createUser = depend(

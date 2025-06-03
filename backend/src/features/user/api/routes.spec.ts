@@ -58,9 +58,9 @@ describe('User API Routes', () => {
       expect(res.status).toBe(200);
       const data = await res.json();
       expect(data.users.length).toBeGreaterThanOrEqual(2);
-      
+
       // Check users are present (order might vary)
-      const emails = data.users.map((u: any) => u.email);
+      const emails = data.users.map((u: { email: string }) => u.email);
       expect(emails).toContain('user1@example.com');
       expect(emails).toContain('user2@example.com');
     });

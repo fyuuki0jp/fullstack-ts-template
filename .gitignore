@@ -27,6 +27,9 @@ lerna-debug.log*
 .DS_Store
 *.db*
 
+# data directories
+backend/data/
+
 # build
 dist/
 build/

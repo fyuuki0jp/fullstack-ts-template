@@ -30,17 +30,43 @@ export const UserForm: FC<UserFormProps> = ({ onSuccess }) => {
 
   const handleEmailChange = (value: string) => {
     setEmail(value);
-    // Clear error when user starts typing
-    if (emailError) setEmailError('');
+
+    // Validate email in real-time only if user has typed something
+    if (value.trim()) {
+      const validation = validateCreateUserInputWithErrors({
+        email: value,
+        name: 'ValidName',
+      });
+      if (!validation.success && validation.errors?.email) {
+        setEmailError(validation.errors.email);
+      } else {
+        setEmailError('');
+      }
+    } else {
+      setEmailError('');
+    }
   };
 
   const handleNameChange = (value: string) => {
     setName(value);
-    // Clear error when user starts typing
-    if (nameError) setNameError('');
+
+    // Validate name in real-time only if user has typed something
+    if (value.trim()) {
+      const validation = validateCreateUserInputWithErrors({
+        email: 'valid@example.com',
+        name: value,
+      });
+      if (!validation.success && validation.errors?.name) {
+        setNameError(validation.errors.name);
+      } else {
+        setNameError('');
+      }
+    } else {
+      setNameError('');
+    }
   };
 
-  const isFormValid = email && name && !emailError && !nameError;
+  const isFormValid = email.trim() && name.trim() && !emailError && !nameError;
 
   const handleSubmit = (e: FormEvent) => {
     e.preventDefault();
@@ -51,18 +77,15 @@ export const UserForm: FC<UserFormProps> = ({ onSuccess }) => {
       return;
     }
 
-    createUser(
-      validatedInput,
-      {
-        onSuccess: () => {
-          setEmail('');
-          setName('');
-          setEmailError('');
-          setNameError('');
-          onSuccess?.();
-        },
-      }
-    );
+    createUser(validatedInput, {
+      onSuccess: () => {
+        setEmail('');
+        setName('');
+        setEmailError('');
+        setNameError('');
+        onSuccess?.();
+      },
+    });
   };
 
   return (

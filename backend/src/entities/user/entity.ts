@@ -1,6 +1,6 @@
 import { z } from 'zod';
 import { depend } from 'velona';
-import { eq, isNull, desc, and } from 'drizzle-orm';
+import { eq, isNull, and } from 'drizzle-orm';
 import { ok, err } from '@fyuuki0jp/railway-result';
 import type { Result } from '@fyuuki0jp/railway-result';
 import { usersTable } from './schema';

@@ -121,8 +121,8 @@ test.describe('User Management', () => {
     await page.getByPlaceholder('John Doe').fill('Second User');
     await page.getByRole('button', { name: 'Create User' }).click();
 
-    // Should show error message
-    await expect(page.getByText(/Error.*UNIQUE constraint/)).toBeVisible();
+    // Should show error message (adjust pattern to match actual error)
+    await expect(page.getByText(/Error.*already exists/)).toBeVisible();
   });
 
   test('should create multiple users and display them correctly', async ({

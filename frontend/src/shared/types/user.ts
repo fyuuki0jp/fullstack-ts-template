@@ -9,14 +9,14 @@ export const EmailSchema = z
   .string()
   .trim()
   .min(1, 'Email is required')
-  .email('Invalid email format')
+  .email('Please enter a valid email address')
   .brand<'Email'>();
 
 export type UserName = z.infer<typeof UserNameSchema>;
 export const UserNameSchema = z
   .string()
   .trim()
-  .min(1, 'Name is required')
+  .min(2, 'Name must be at least 2 characters long')
   .max(100, 'Name must be 100 characters or less')
   .brand<'UserName'>();
 
@@ -52,11 +52,11 @@ const _CreateUserInputSchema = z.object({
     .string()
     .trim()
     .min(1, 'Email is required')
-    .email('Invalid email format'),
+    .email('Please enter a valid email address'),
   name: z
     .string()
     .trim()
-    .min(1, 'Name is required')
+    .min(2, 'Name must be at least 2 characters long')
     .max(100, 'Name must be 100 characters or less'),
 });
 
