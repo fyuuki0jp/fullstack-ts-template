@@ -89,22 +89,31 @@ async function operation(): Promise<Result<Data, Error>> {
 コマンドとクエリは分離されています：
 
 ```typescript
-// バリデーション付きコマンド
+// Zodバリデーション付きコマンド
 export const createUser = depend(
-  { userRepo },
-  async ({ userRepo }, input) => {
-    // メール形式のバリデーション
-    if (!input.email.includes('@')) {
-      return err(new Error('Invalid email'));
-    }
-    return userRepo.create(input);
+  { db: {} as DrizzleDb },
+  ({ db }) =>
+    async (input: unknown): Promise<Result<User, Error>> => {
+      // Zodを使用した入力バリデーション
+      const validationResult = validateCreateUserInput(input);
+      if (isErr(validationResult)) {
+        return validationResult;
+      }
+
+      // Entityを使用してユーザー作成
+      const userEntity = UserEntity.inject({ db })();
+      return userEntity.create(validationResult.data);
   }
 );
 
 // クエリ（ビジネスロジックなし）
 export const getUsers = depend(
-  { userRepo },
-  async ({ userRepo }) => userRepo.findAll()
+  { db: {} as DrizzleDb },
+  ({ db }) =>
+    async (): Promise<Result<User[], Error>> => {
+      const userEntity = UserEntity.inject({ db })();
+      return userEntity.findAll();
+    }
 );
 ```
 
@@ -113,44 +122,144 @@ export const getUsers = depend(
 ルートレベルでの手動注入：
 
 ```typescript
-export default function createUserRoutes(db: DbAdapter) {
-  const userRepo = userRepositoryImpl.inject({ db });
-  const createUserCmd = createUser.inject({ userRepo });
-  const getUsersQuery = getUsers.inject({ userRepo });
-  
-  const router = new Hono();
-  // ルートハンドラーは注入された依存性を使用
-  return router;
-}
+export default (db: DrizzleDb) => {
+  return new Hono()
+    .get('/', async (c) => {
+      const getUsersUseCase = getUsers.inject({ db })();
+      const result = await getUsersUseCase();
+
+      if (isErr(result)) {
+        return c.json({ error: result.error.message }, 500);
+      }
+
+      return c.json({ users: result.data });
+    })
+    .post('/', async (c) => {
+      const createUserUseCase = createUser.inject({ db })();
+      
+      let body;
+      try {
+        body = await c.req.json();
+      } catch {
+        return c.json({ error: 'Invalid JSON' }, 400);
+      }
+
+      const result = await createUserUseCase(body);
+
+      if (isErr(result)) {
+        const statusCode = determineStatusCode(result.error.message);
+        return c.json({ error: result.error.message }, statusCode);
+      }
+
+      return c.json({ user: result.data }, 201);
+    });
+};
 ```
 
-### 5. アダプターパターン
+### 5. Zodバリデーション戦略
 
-データベース操作は抽象化されています：
+Zodを使用して型安全なバリデーションを実装：
 
 ```typescript
-interface DbAdapter {
-  query<T>(sql: string, params?: any[]): Promise<Result<T[], Error>>;
-  execute(sql: string, params?: any[]): Promise<Result<void, Error>>;
-  transaction<T>(fn: (tx: DbAdapter) => Promise<Result<T, Error>>): Promise<Result<T, Error>>;
-}
+// エンティティレベルでのZodスキーマ定義
+export const EmailSchema = z
+  .string()
+  .trim()
+  .min(1, 'Email is required')
+  .email('Please enter a valid email address')
+  .brand<'Email'>();
+
+export const UserNameSchema = z
+  .string()
+  .trim()
+  .min(2, 'Name must be at least 2 characters long')
+  .max(100, 'Name must be 100 characters or less')
+  .brand<'UserName'>();
+
+export const CreateUserInputSchema = z.object({
+  email: EmailSchema,
+  name: UserNameSchema,
+});
+
+// フロントエンドでのリアルタイムバリデーション
+export const validateCreateUserInputWithErrors = (data: unknown) => {
+  const result = CreateUserInputSchema.safeParse(data);
+  if (result.success) {
+    return { success: true, data: result.data, errors: null };
+  }
+
+  const errors = result.error.errors.reduce(
+    (acc, error) => {
+      const field = error.path[0] as keyof CreateUserInput;
+      acc[field] = error.message;
+      return acc;
+    },
+    {} as Record<keyof CreateUserInput, string>
+  );
+
+  return { success: false, data: null, errors };
+};
 ```
 
 ### 6. エンティティ管理
 
-すべてのエンティティは基底インターフェースを拡張します：
+Zodスキーマとbranded typesを使用したエンティティ定義：
 
 ```typescript
-interface Entity {
-  id: string;
-  createdAt: Date;
-  updatedAt: Date;
-}
+// Branded types for domain-specific IDs and values
+export type UserId = z.infer<typeof UserIdSchema>;
+export const UserIdSchema = z.string().uuid().brand<'UserId'>();
 
-interface User extends Entity {
-  email: string;
-  name: string;
-}
+export type User = z.infer<typeof UserSchema>;
+export const UserSchema = z.object({
+  id: UserIdSchema,
+  email: EmailSchema,
+  name: UserNameSchema,
+  createdAt: z.date(),
+  updatedAt: z.date(),
+  deletedAt: z.date().nullable(),
+});
+
+// Entityパターンによるドメインロジック
+export const UserEntity = depend({ db: {} as DrizzleDb }, ({ db }) => ({
+  async create(input: CreateUserInput): Promise<Result<User, Error>> {
+    try {
+      // バリデーション、ID生成、データベース操作
+      const validationResult = CreateUserInputSchema.safeParse(input);
+      if (!validationResult.success) {
+        return err(new Error('Validation failed'));
+      }
+
+      const idResult = createUserId();
+      if (!idResult.success) {
+        return err(idResult.error);
+      }
+
+      // Drizzle ORMによるデータベース操作
+      const [dbUser] = await db
+        .insert(usersTable)
+        .values({
+          id: idResult.data,
+          email: validationResult.data.email,
+          name: validationResult.data.name,
+          createdAt: new Date(),
+          updatedAt: new Date(),
+          deletedAt: null,
+        })
+        .returning();
+
+      return ok(userResult.data);
+    } catch (error) {
+      // 重複メールエラーの処理
+      if (error.message.includes('unique constraint')) {
+        return err(new Error('Email already exists'));
+      }
+      return err(error as Error);
+    }
+  },
+  // その他のCRUD操作
+}));
+
 ```
 
 ### 7. エラーハンドリングフロー
@@ -170,7 +279,7 @@ return c.json(result.data, 201);
 
 ```typescript
 // ✅ 正しい：メソッドチェーン
-export default (db: DbAdapter) => {
+export default (db: DrizzleDb) => {
   return new Hono()
     .get('/', async (c) => {
       // ハンドラー実装
@@ -187,7 +296,7 @@ export default (db: DbAdapter) => {
 };
 
 // ❌ 間違い：個別宣言
-export default (db: DbAdapter) => {
+export default (db: DrizzleDb) => {
   const router = new Hono();
   router.get('/', handler);
   router.post('/', handler);
@@ -497,6 +606,152 @@ export const useUsers = () => {
 
 // UIコンポーネントでの使用
 const { data, isLoading, error } = useUsers();
+```
+
+### 8. フロントエンドバリデーション戦略
+
+フロントエンドでは共有Zodスキーマを使用してリアルタイムバリデーションを実装：
+
+```typescript
+// shared/types/user.ts - フロントエンド用Zodスキーマ
+export const CreateUserInputSchema = z.object({
+  email: z
+    .string()
+    .trim()
+    .min(1, 'Email is required')
+    .email('Please enter a valid email address'),
+  name: z
+    .string()
+    .trim()
+    .min(2, 'Name must be at least 2 characters long')
+    .max(100, 'Name must be 100 characters or less'),
+});
+
+// エラー詳細付きバリデーション関数
+export const validateCreateUserInputWithErrors = (data: unknown) => {
+  const result = CreateUserInputSchema.safeParse(data);
+  if (result.success) {
+    return { success: true, data: result.data, errors: null };
+  }
+
+  const errors = result.error.errors.reduce(
+    (acc, error) => {
+      const field = error.path[0] as keyof CreateUserInput;
+      acc[field] = error.message;
+      return acc;
+    },
+    {} as Record<keyof CreateUserInput, string>
+  );
+
+  return { success: false, data: null, errors };
+};
+```
+
+### 9. リアルタイムバリデーションパターン
+
+入力中にバリデーションを実行してUXを向上：
+
+```typescript
+// features/user-creation/ui/user-form.tsx
+export const UserForm: FC<UserFormProps> = ({ onSuccess }) => {
+  const [email, setEmail] = useState('');
+  const [name, setName] = useState('');
+  const [emailError, setEmailError] = useState('');
+  const [nameError, setNameError] = useState('');
+  const { mutate: createUser, isPending, error } = useCreateUser();
+
+  // リアルタイムバリデーション
+  const handleEmailChange = (value: string) => {
+    setEmail(value);
+    
+    if (value.trim()) {
+      const validation = validateCreateUserInputWithErrors({
+        email: value,
+        name: 'ValidName', // 他フィールドダミー値
+      });
+      if (!validation.success && validation.errors?.email) {
+        setEmailError(validation.errors.email);
+      } else {
+        setEmailError('');
+      }
+    } else {
+      setEmailError('');
+    }
+  };
+
+  const handleNameChange = (value: string) => {
+    setName(value);
+    
+    if (value.trim()) {
+      const validation = validateCreateUserInputWithErrors({
+        email: 'valid@example.com', // 他フィールドダミー値
+        name: value,
+      });
+      if (!validation.success && validation.errors?.name) {
+        setNameError(validation.errors.name);
+      } else {
+        setNameError('');
+      }
+    } else {
+      setNameError('');
+    }
+  };
+
+  // フォーム有効性チェック
+  const isFormValid = email.trim() && name.trim() && !emailError && !nameError;
+
+  const handleSubmit = (e: FormEvent) => {
+    e.preventDefault();
+    
+    const validatedInput = validateForm();
+    if (!validatedInput) return;
+
+    createUser(validatedInput, {
+      onSuccess: () => {
+        setEmail('');
+        setName('');
+        setEmailError('');
+        setNameError('');
+        onSuccess?.();
+      },
+    });
+  };
+
+  return (
+    <form onSubmit={handleSubmit} className="space-y-4">
+      <Input
+        label="Email Address"
+        value={email}
+        onChange={handleEmailChange}
+        error={emailError}
+        isDisabled={isPending}
+        placeholder="user@example.com"
+      />
+
+      <Input
+        label="Full Name"
+        value={name}
+        onChange={handleNameChange}
+        error={nameError}
+        isDisabled={isPending}
+        placeholder="John Doe"
+      />
+
+      {error && (
+        <div className="text-red-600 text-sm p-3 bg-red-50 border border-red-200 rounded-md">
+          <strong>Error:</strong> {error.message}
+        </div>
+      )}
+
+      <Button
+        type="submit"
+        isDisabled={isPending || !isFormValid}
+      >
+        {isPending ? 'Creating...' : 'Create User'}
+      </Button>
+    </form>
+  );
+};
 ```
 
 ## 依存関係

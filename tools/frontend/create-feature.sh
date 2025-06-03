@@ -460,13 +460,13 @@ export * from './hooks';
 EOF
 fi
 
-# Create form component
+# Create form component with real-time validation
 if [ "$DRY_RUN" = true ]; then
     echo "Would create file: $FEATURE_DIR/ui/${ENTITY_NAME}-form.tsx"
 else
     cat > "$FEATURE_DIR/ui/${ENTITY_NAME}-form.tsx" << EOF
 import { FC, FormEvent, useState } from 'react';
-import { Button, Input, Card } from '@/shared/ui';
+import { Button, Input } from '@/shared/ui';
 import { useCreate${PASCAL_CASE_NAME} } from '../api';
 import {
   type Create${PASCAL_CASE_NAME}Input,
@@ -478,84 +478,141 @@ interface ${PASCAL_CASE_NAME}FormProps {
 }
 
 export const ${PASCAL_CASE_NAME}Form: FC<${PASCAL_CASE_NAME}FormProps> = ({ onSuccess }) => {
-  const [formData, setFormData] = useState({
-    name: '',
-    description: '',
-  });
-  const [fieldErrors, setFieldErrors] = useState<Record<string, string>>({});
-
+  const [name, setName] = useState('');
+  const [description, setDescription] = useState('');
+  const [nameError, setNameError] = useState('');
+  const [descriptionError, setDescriptionError] = useState('');
   const { mutate: create${PASCAL_CASE_NAME}, isPending, error } = useCreate${PASCAL_CASE_NAME}();
+
+  const validateForm = (): Create${PASCAL_CASE_NAME}Input | null => {
+    const validation = validateCreate${PASCAL_CASE_NAME}InputWithErrors({ name, description });
+    if (validation.success) {
+      setNameError('');
+      setDescriptionError('');
+      return validation.data;
+    }
+
+    setNameError(validation.errors?.name || '');
+    setDescriptionError(validation.errors?.description || '');
+    return null;
+  };
+
+  const handleNameChange = (value: string) => {
+    setName(value);
+    
+    // Real-time validation for name
+    if (value.trim()) {
+      const validation = validateCreate${PASCAL_CASE_NAME}InputWithErrors({
+        name: value,
+        description: description || undefined,
+      });
+      if (!validation.success && validation.errors?.name) {
+        setNameError(validation.errors.name);
+      } else {
+        setNameError('');
+      }
+    } else {
+      setNameError('');
+    }
+  };
+
+  const handleDescriptionChange = (value: string) => {
+    setDescription(value);
+    
+    // Real-time validation for description
+    if (value.trim()) {
+      const validation = validateCreate${PASCAL_CASE_NAME}InputWithErrors({
+        name: name || 'ValidName', // Dummy value for other field
+        description: value,
+      });
+      if (!validation.success && validation.errors?.description) {
+        setDescriptionError(validation.errors.description);
+      } else {
+        setDescriptionError('');
+      }
+    } else {
+      setDescriptionError('');
+    }
+  };
+
+  const isFormValid = name.trim() && !nameError && !descriptionError;
 
   const handleSubmit = (e: FormEvent) => {
     e.preventDefault();
-    setFieldErrors({});
 
-    // Validate form data with zod
-    const validation = validateCreate${PASCAL_CASE_NAME}InputWithErrors(formData);
-    if (!validation.success) {
-      setFieldErrors(validation.errors || {});
+    // Validate form with zod
+    const validatedInput = validateForm();
+    if (!validatedInput) {
       return;
     }
 
-    // Create ${ENTITY_NAME} with validated data
-    create${PASCAL_CASE_NAME}(validation.data as Create${PASCAL_CASE_NAME}Input, {
+    create${PASCAL_CASE_NAME}(validatedInput, {
       onSuccess: () => {
-        setFormData({ name: '', description: '' });
-        setFieldErrors({});
+        setName('');
+        setDescription('');
+        setNameError('');
+        setDescriptionError('');
         onSuccess?.();
       },
     });
   };
 
   return (
-    <Card>
-      <h3 className="text-lg font-semibold mb-4">Create New ${PASCAL_CASE_NAME}</h3>
-      <form onSubmit={handleSubmit} className="space-y-4">
-        <div>
-          <label htmlFor="name" className="block text-sm font-medium mb-1">
-            Name *
-          </label>
-          <Input
-            id="name"
-            type="text"
-            placeholder="Enter name"
-            value={formData.name}
-            onChange={(e) => setFormData({ ...formData, name: e.target.value })}
-            required
-          />
-          {fieldErrors.name && (
-            <div className="text-red-600 text-sm mt-1">{fieldErrors.name}</div>
-          )}
+    <form
+      onSubmit={handleSubmit}
+      className="space-y-4"
+      noValidate
+      aria-label="Create new ${ENTITY_NAME}"
+    >
+      <Input
+        label="Name"
+        type="text"
+        value={name}
+        onChange={handleNameChange}
+        placeholder="Enter ${ENTITY_NAME} name"
+        isRequired
+        isDisabled={isPending}
+        error={nameError}
+        autoComplete="off"
+        aria-describedby={nameError ? 'name-error' : undefined}
+      />
+
+      <Input
+        label="Description"
+        type="text"
+        value={description}
+        onChange={handleDescriptionChange}
+        placeholder="Enter description (optional)"
+        isDisabled={isPending}
+        error={descriptionError}
+        autoComplete="off"
+        aria-describedby={descriptionError ? 'description-error' : undefined}
+      />
+
+      {error && (
+        <div
+          className="text-red-600 text-sm p-3 bg-red-50 border border-red-200 rounded-md"
+          role="alert"
+          aria-live="polite"
+        >
+          <strong>Error:</strong> {error.message}
         </div>
-        
-        <div>
-          <label htmlFor="description" className="block text-sm font-medium mb-1">
-            Description
-          </label>
-          <textarea
-            id="description"
-            className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
-            placeholder="Enter description (optional)"
-            value={formData.description}
-            onChange={(e) => setFormData({ ...formData, description: e.target.value })}
-            rows={3}
-          />
-          {fieldErrors.description && (
-            <div className="text-red-600 text-sm mt-1">{fieldErrors.description}</div>
-          )}
+      )}
+
+      <Button
+        type="submit"
+        isDisabled={isPending || !isFormValid}
+        aria-describedby={isPending ? 'submit-status' : undefined}
+      >
+        {isPending ? 'Creating...' : 'Create ${PASCAL_CASE_NAME}'}
+      </Button>
+
+      {isPending && (
+        <div id="submit-status" className="sr-only" aria-live="polite">
+          Creating ${ENTITY_NAME}, please wait...
         </div>
-        
-        {error && (
-          <div className="text-red-600 text-sm">{error.message}</div>
-        )}
-        
-        <div className="flex gap-2">
-          <Button type="submit" disabled={isPending}>
-            {isPending ? 'Creating...' : 'Create'}
-          </Button>
-        </div>
-      </form>
-    </Card>
+      )}
+    </form>
   );
 };
 EOF
