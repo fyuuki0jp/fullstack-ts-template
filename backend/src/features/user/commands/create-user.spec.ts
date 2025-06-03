@@ -50,7 +50,9 @@ describe('createUser command', () => {
 
     expect(isErr(result)).toBe(true);
     if (isErr(result)) {
-      expect(result.error.message).toContain('Invalid email format');
+      expect(result.error.message).toContain(
+        'Please enter a valid email address'
+      );
     }
   });
 
@@ -78,7 +80,9 @@ describe('createUser command', () => {
 
     expect(isErr(result)).toBe(true);
     if (isErr(result)) {
-      expect(result.error.message).toContain('Invalid email format');
+      expect(result.error.message).toContain(
+        'Please enter a valid email address'
+      );
     }
   });
 
@@ -148,7 +152,9 @@ describe('createUser command', () => {
 
     expect(isErr(result)).toBe(true);
     if (isErr(result)) {
-      expect(result.error.message).toContain('Name is required');
+      expect(result.error.message).toContain(
+        'Name must be at least 2 characters long'
+      );
     }
   });
 
@@ -178,8 +184,12 @@ describe('createUser command', () => {
 
     expect(isErr(result)).toBe(true);
     if (isErr(result)) {
-      expect(result.error.message).toContain('Invalid email format');
-      expect(result.error.message).toContain('Name is required');
+      expect(result.error.message).toContain(
+        'Please enter a valid email address'
+      );
+      expect(result.error.message).toContain(
+        'Name must be at least 2 characters long'
+      );
     }
   });
 

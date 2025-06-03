@@ -1,54 +1,21 @@
-import { z } from 'zod';
 import { depend } from 'velona';
 import { eq, isNull, and } from 'drizzle-orm';
 import { ok, err } from '@fyuuki0jp/railway-result';
 import type { Result } from '@fyuuki0jp/railway-result';
-import { usersTable } from './schema';
+import {
+  usersTable,
+  userSelectSchema,
+  userInsertSchema,
+  userUpdateSchema,
+  UserIdSchema,
+  type User,
+  type CreateUserInput,
+  type UpdateUserInput,
+  type UserId,
+} from './schema';
 import type { DrizzleDb } from '../../shared/adapters/db/pglite';
 
-// 1. Branded types for domain-specific IDs and values
-export type UserId = z.infer<typeof UserIdSchema>;
-export const UserIdSchema = z.string().uuid().brand<'UserId'>();
-
-export type Email = z.infer<typeof EmailSchema>;
-export const EmailSchema = z
-  .string()
-  .trim()
-  .min(1, 'Email is required')
-  .email('Invalid email format')
-  .brand<'Email'>();
-
-export type UserName = z.infer<typeof UserNameSchema>;
-export const UserNameSchema = z
-  .string()
-  .trim()
-  .min(1, 'Name is required')
-  .max(100, 'Name must be 100 characters or less')
-  .brand<'UserName'>();
-
-// 2. User entity schema with branded types
-export const UserSchema = z.object({
-  id: UserIdSchema,
-  email: EmailSchema,
-  name: UserNameSchema,
-  createdAt: z.date(),
-  updatedAt: z.date(),
-  deletedAt: z.date().nullable(),
-});
-
-export const CreateUserInputSchema = z.object({
-  email: EmailSchema,
-  name: UserNameSchema,
-});
-
-export const UpdateUserInputSchema = CreateUserInputSchema.partial();
-
-// 3. Type definitions
-export type User = z.infer<typeof UserSchema>;
-export type CreateUserInput = z.infer<typeof CreateUserInputSchema>;
-export type UpdateUserInput = z.infer<typeof UpdateUserInputSchema>;
-
-// 4. ID Generation helper
+// ID Generation helper
 export const createUserId = (): Result<UserId, Error> => {
   const result = UserIdSchema.safeParse(globalThis.crypto.randomUUID());
   if (!result.success) {
@@ -57,9 +24,9 @@ export const createUserId = (): Result<UserId, Error> => {
   return ok(result.data);
 };
 
-// 3. ドメイン固有のバリデーション関数
+// ドメイン固有のバリデーション関数（Drizzle-Zod自動生成スキーマを使用）
 export const validateUser = (data: unknown): Result<User, Error> => {
-  const result = UserSchema.safeParse(data);
+  const result = userSelectSchema.safeParse(data);
   if (!result.success) {
     const errorMessage = result.error.issues
       .map((issue) => issue.message)
@@ -72,7 +39,7 @@ export const validateUser = (data: unknown): Result<User, Error> => {
 export const validateCreateUserInput = (
   data: unknown
 ): Result<CreateUserInput, Error> => {
-  const result = CreateUserInputSchema.safeParse(data);
+  const result = userInsertSchema.safeParse(data);
   if (!result.success) {
     const errorMessage = result.error.issues
       .map((issue) => issue.message)
@@ -84,11 +51,26 @@ export const validateCreateUserInput = (
   return ok(result.data);
 };
 
-// 4. Entity操作（DIパターン with Drizzle）
+export const validateUpdateUserInput = (
+  data: unknown
+): Result<UpdateUserInput, Error> => {
+  const result = userUpdateSchema.safeParse(data);
+  if (!result.success) {
+    const errorMessage = result.error.issues
+      .map((issue) => issue.message)
+      .join(', ');
+    return err(
+      new Error(`Update user input validation failed: ${errorMessage}`)
+    );
+  }
+  return ok(result.data);
+};
+
+// Entity操作（DIパターン with Drizzle）
 export const UserEntity = depend({ db: {} as DrizzleDb }, ({ db }) => ({
   async create(input: CreateUserInput): Promise<Result<User, Error>> {
     try {
-      const validationResult = CreateUserInputSchema.safeParse(input);
+      const validationResult = userInsertSchema.safeParse(input);
       if (!validationResult.success) {
         const errorMessage = validationResult.error.issues
           .map((issue) => issue.message)
@@ -233,7 +215,7 @@ export const UserEntity = depend({ db: {} as DrizzleDb }, ({ db }) => ({
     input: UpdateUserInput
   ): Promise<Result<User | null, Error>> {
     try {
-      const validationResult = UpdateUserInputSchema.safeParse(input);
+      const validationResult = userUpdateSchema.safeParse(input);
       if (!validationResult.success) {
         const errorMessage = validationResult.error.issues
           .map((issue) => issue.message)

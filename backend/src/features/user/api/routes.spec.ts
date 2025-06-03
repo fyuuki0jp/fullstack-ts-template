@@ -107,7 +107,7 @@ describe('User API Routes', () => {
 
       expect(res.status).toBe(400);
       const data = await res.json();
-      expect(data.error).toContain('Invalid email format');
+      expect(data.error).toContain('Please enter a valid email address');
     });
 
     it('should handle missing email field', async () => {
@@ -245,8 +245,8 @@ describe('User API Routes', () => {
 
       expect(res.status).toBe(400);
       const data = await res.json();
-      expect(data.error).toContain('Invalid email format');
-      expect(data.error).toContain('Name is required');
+      expect(data.error).toContain('Please enter a valid email address');
+      expect(data.error).toContain('Name must be at least 2 characters long');
     });
   });
 });
