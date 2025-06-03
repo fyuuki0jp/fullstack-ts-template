@@ -7,5 +7,3 @@ export interface DbAdapter {
     fn: (tx: DbAdapter) => Promise<Result<T, Error>>
   ): Promise<Result<T, Error>>;
 }
-
-export { MockDbAdapter } from './mock';

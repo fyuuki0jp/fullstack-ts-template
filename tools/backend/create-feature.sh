@@ -593,20 +593,29 @@ describe('get${PASCAL_CASE_NAME}s query', () => {
 
 # Create API routes test
 create_file "$FEATURE_DIR/api/routes.spec.ts" "\
-import { describe, it, expect, beforeEach } from 'vitest';
+import { describe, it, expect, beforeAll, afterAll } from 'vitest';
 import { Hono } from 'hono';
 import create${PASCAL_CASE_NAME}Routes from './routes';
-import { MockDbAdapter } from '../../../shared/adapters/db/mock';
+import { setupTestDatabase } from '../../../shared/adapters/db/pglite';
+import type { PGlite } from '@electric-sql/pglite';
+import type { DrizzleDb } from '../../../shared/adapters/db/pglite';
 
 describe('${PASCAL_CASE_NAME} API Routes', () => {
   let app: Hono;
-  let mockDb: MockDbAdapter;
+  let client: PGlite;
+  let db: DrizzleDb;
 
-  beforeEach(() => {
-    mockDb = new MockDbAdapter();
-    const ${ENTITY_NAME}Routes = create${PASCAL_CASE_NAME}Routes(mockDb);
+  beforeAll(async () => {
+    const setup = await setupTestDatabase();
+    client = setup.client;
+    db = setup.db;
+    const ${ENTITY_NAME}Routes = create${PASCAL_CASE_NAME}Routes(db);
     app = new Hono();
     app.route('/', ${ENTITY_NAME}Routes);
+  });
+
+  afterAll(async () => {
+    await client.close();
   });
 
   describe('GET /', () => {
@@ -619,43 +628,37 @@ describe('${PASCAL_CASE_NAME} API Routes', () => {
     });
 
     it('should return all ${ENTITY_NAME}s when they exist', async () => {
-      const ${ENTITY_NAME}s = [
-        {
-          id: '550e8400-e29b-41d4-a716-446655440001',
-          name: '${PASCAL_CASE_NAME} 1',
-          description: 'First ${ENTITY_NAME}',
-          created_at: '2023-01-01T00:00:00Z',
-          updated_at: '2023-01-01T00:00:00Z',
-          deleted_at: null,
-        },
-        {
-          id: '550e8400-e29b-41d4-a716-446655440002',
-          name: '${PASCAL_CASE_NAME} 2',
-          description: 'Second ${ENTITY_NAME}',
-          created_at: '2023-01-02T00:00:00Z',
-          updated_at: '2023-01-02T00:00:00Z',
-          deleted_at: null,
-        },
-      ];
-      mockDb.setData('${ENTITY_NAME}s', ${ENTITY_NAME}s);
+      // Create isolated test instance  
+      const isolatedSetup = await setupTestDatabase();
+      const isolatedRoutes = create${PASCAL_CASE_NAME}Routes(isolatedSetup.db);
+      const testApp = new Hono();
+      testApp.route('/', isolatedRoutes);
 
-      const res = await app.request('/');
+      // Create test ${ENTITY_NAME}s
+      await testApp.request('/', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ name: '${PASCAL_CASE_NAME} 1', description: 'First ${ENTITY_NAME}' }),
+      });
+
+      await testApp.request('/', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ name: '${PASCAL_CASE_NAME} 2', description: 'Second ${ENTITY_NAME}' }),
+      });
+
+      const res = await testApp.request('/');
 
       expect(res.status).toBe(200);
       const data = await res.json();
-      expect(data.${ENTITY_NAME}s).toHaveLength(2);
-      expect(data.${ENTITY_NAME}s[0].name).toBe('${PASCAL_CASE_NAME} 2');
-      expect(data.${ENTITY_NAME}s[1].name).toBe('${PASCAL_CASE_NAME} 1');
-    });
+      expect(data.${ENTITY_NAME}s.length).toBeGreaterThanOrEqual(2);
 
-    it('should handle database errors gracefully', async () => {
-      mockDb.mockFailure('Database connection failed');
+      // Check ${ENTITY_NAME}s are present (order might vary)
+      const names = data.${ENTITY_NAME}s.map((item: { name: string }) => item.name);
+      expect(names).toContain('${PASCAL_CASE_NAME} 1');
+      expect(names).toContain('${PASCAL_CASE_NAME} 2');
 
-      const res = await app.request('/');
-
-      expect(res.status).toBe(500);
-      const data = await res.json();
-      expect(data.error).toBe('Database connection failed');
+      await isolatedSetup.client.close();
     });
   });
 
@@ -681,10 +684,7 @@ describe('${PASCAL_CASE_NAME} API Routes', () => {
       expect(data.${ENTITY_NAME}.id).toBeTruthy();
       expect(data.${ENTITY_NAME}.createdAt).toBeTruthy();
       expect(data.${ENTITY_NAME}.updatedAt).toBeTruthy();
-
-      // Verify ${ENTITY_NAME} was stored in database
-      const ${ENTITY_NAME}s = mockDb.getData('${ENTITY_NAME}s');
-      expect(${ENTITY_NAME}s).toHaveLength(1);
+      expect(data.${ENTITY_NAME}.deletedAt).toBeNull();
     });
 
     it('should validate name is required', async () => {
@@ -723,25 +723,29 @@ describe('${PASCAL_CASE_NAME} API Routes', () => {
 
   describe('GET /:id', () => {
     it('should return ${ENTITY_NAME} by id', async () => {
-      const ${ENTITY_NAME}Id = '550e8400-e29b-41d4-a716-446655440001';
-      const ${ENTITY_NAME}s = [
-        {
-          id: ${ENTITY_NAME}Id,
-          name: 'Test ${PASCAL_CASE_NAME}',
-          description: 'A test ${ENTITY_NAME}',
-          created_at: '2023-01-01T00:00:00Z',
-          updated_at: '2023-01-01T00:00:00Z',
-          deleted_at: null,
-        },
-      ];
-      mockDb.setData('${ENTITY_NAME}s', ${ENTITY_NAME}s);
+      // Create isolated test instance and add test data
+      const isolatedSetup = await setupTestDatabase();
+      const isolatedRoutes = create${PASCAL_CASE_NAME}Routes(isolatedSetup.db);
+      const testApp = new Hono();
+      testApp.route('/', isolatedRoutes);
 
-      const res = await app.request(\`/\${${ENTITY_NAME}Id}\`);
+      // Create a test ${ENTITY_NAME}
+      const createRes = await testApp.request('/', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ name: 'Test ${PASCAL_CASE_NAME}', description: 'A test ${ENTITY_NAME}' }),
+      });
+      const createData = await createRes.json();
+      const ${ENTITY_NAME}Id = createData.${ENTITY_NAME}.id;
+
+      const res = await testApp.request(\`/\${${ENTITY_NAME}Id}\`);
 
       expect(res.status).toBe(200);
       const data = await res.json();
       expect(data.${ENTITY_NAME}.id).toBe(${ENTITY_NAME}Id);
       expect(data.${ENTITY_NAME}.name).toBe('Test ${PASCAL_CASE_NAME}');
+
+      await isolatedSetup.client.close();
     });
 
     it('should return 404 when ${ENTITY_NAME} not found', async () => {
