@@ -6,7 +6,8 @@
     "lib": ["ES2020", "DOM", "DOM.Iterable"],
     "baseUrl": ".",
     "paths": {
-      "@/*": ["./src/*"]
+      "@/*": ["./src/*"],
+      "@backend/*": ["../backend/src/*"]
     }
   },
   "include": ["src/**/*.ts", "src/**/*.tsx", "vite-env.d.ts", "../backend/src/**/*.ts"],

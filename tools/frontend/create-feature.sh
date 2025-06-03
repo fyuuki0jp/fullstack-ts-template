@@ -50,29 +50,108 @@ else
     mkdir -p "$FEATURE_DIR/model"
 fi
 
-# Create types file
+# Check if backend entity exists
+BACKEND_ENTITY_FILE="backend/src/entities/${ENTITY_NAME}.ts"
+if [ ! -f "$BACKEND_ENTITY_FILE" ]; then
+    echo "⚠️  Backend entity '${ENTITY_NAME}' not found. Please create it first using:"
+    echo "   ./tools/backend/create-entity.sh ${ENTITY_NAME}"
+    exit 1
+fi
+
+# Create shared types file (imports backend types)
 if [ "$DRY_RUN" = true ]; then
-    echo "Would create file: $FEATURE_DIR/types.ts"
+    echo "Would create file: frontend/src/shared/types/${ENTITY_NAME}.ts"
 else
-    cat > "$FEATURE_DIR/types.ts" << EOF
-export interface ${PASCAL_CASE_NAME} {
-  id: string;
-  name: string;
-  description: string;
+    cat > "frontend/src/shared/types/${ENTITY_NAME}.ts" << EOF
+import { z } from 'zod';
+// Import backend types directly to avoid duplication
+import type {
+  ${PASCAL_CASE_NAME} as Backend${PASCAL_CASE_NAME},
+  Create${PASCAL_CASE_NAME}Input as BackendCreate${PASCAL_CASE_NAME}Input,
+  ${PASCAL_CASE_NAME}Id,
+} from '@backend/entities/${ENTITY_NAME}';
+
+// Re-export backend types for convenience
+export type { ${PASCAL_CASE_NAME}Id };
+export type { Create${PASCAL_CASE_NAME}Input } from '@backend/entities/${ENTITY_NAME}';
+
+// Frontend ${PASCAL_CASE_NAME} type with ISO string dates (transformed from backend Date objects)
+export type ${PASCAL_CASE_NAME} = Omit<
+  Backend${PASCAL_CASE_NAME},
+  'createdAt' | 'updatedAt' | 'deletedAt'
+> & {
   createdAt: string;
   updatedAt: string;
-}
+  deletedAt: string | null;
+};
 
-export interface Create${PASCAL_CASE_NAME}Input {
-  name: string;
-  description: string;
-}
+// Frontend ${PASCAL_CASE_NAME} schema for validation (dates as ISO strings)
+const _Frontend${PASCAL_CASE_NAME}Schema = z.object({
+  id: z.string().uuid().brand<'${PASCAL_CASE_NAME}Id'>(),
+  name: z.string().trim().min(1).max(100),
+  description: z.string().trim().max(500).nullable(),
+  createdAt: z.string().datetime(),
+  updatedAt: z.string().datetime(),
+  deletedAt: z.string().datetime().nullable(),
+});
 
-export interface Update${PASCAL_CASE_NAME}Input {
-  name?: string;
-  description?: string;
-}
+// Frontend input schema (same as backend)
+const _Create${PASCAL_CASE_NAME}InputSchema = z.object({
+  name: z
+    .string()
+    .trim()
+    .min(1, 'Name is required')
+    .max(100, 'Name must be 100 characters or less'),
+  description: z
+    .string()
+    .trim()
+    .max(500, 'Description must be 500 characters or less')
+    .optional(),
+});
 
+// Validation helpers
+export const validate${PASCAL_CASE_NAME} = (data: unknown): ${PASCAL_CASE_NAME} | null => {
+  const result = _Frontend${PASCAL_CASE_NAME}Schema.safeParse(data);
+  return result.success ? result.data : null;
+};
+
+export const validateCreate${PASCAL_CASE_NAME}Input = (
+  data: unknown
+): BackendCreate${PASCAL_CASE_NAME}Input | null => {
+  const result = _Create${PASCAL_CASE_NAME}InputSchema.safeParse(data);
+  return result.success ? result.data : null;
+};
+
+// Form validation with error details
+export const validateCreate${PASCAL_CASE_NAME}InputWithErrors = (data: unknown) => {
+  const result = _Create${PASCAL_CASE_NAME}InputSchema.safeParse(data);
+  if (result.success) {
+    return { success: true, data: result.data, errors: null };
+  }
+
+  const errors = result.error.errors.reduce(
+    (acc, error) => {
+      const field = error.path[0] as keyof BackendCreate${PASCAL_CASE_NAME}Input;
+      acc[field] = error.message;
+      return acc;
+    },
+    {} as Record<keyof BackendCreate${PASCAL_CASE_NAME}Input, string>
+  );
+
+  return { success: false, data: null, errors };
+};
+
+// Utility to transform backend ${PASCAL_CASE_NAME} (with Date objects) to frontend ${PASCAL_CASE_NAME} (with ISO strings)
+export const transformBackend${PASCAL_CASE_NAME}ToFrontend = (
+  backend${PASCAL_CASE_NAME}: Backend${PASCAL_CASE_NAME}
+): ${PASCAL_CASE_NAME} => ({
+  ...backend${PASCAL_CASE_NAME},
+  createdAt: backend${PASCAL_CASE_NAME}.createdAt.toISOString(),
+  updatedAt: backend${PASCAL_CASE_NAME}.updatedAt.toISOString(),
+  deletedAt: backend${PASCAL_CASE_NAME}.deletedAt?.toISOString() || null,
+});
+
+// Response types for API
 export interface ${PASCAL_CASE_NAME}sResponse {
   ${ENTITY_NAME}s: ${PASCAL_CASE_NAME}[];
 }
@@ -90,13 +169,13 @@ else
     cat > "$FEATURE_DIR/api/hooks.ts" << EOF
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { apiClient } from '@/shared/lib';
-import type { 
-  ${PASCAL_CASE_NAME}, 
-  Create${PASCAL_CASE_NAME}Input, 
-  Update${PASCAL_CASE_NAME}Input,
-  ${PASCAL_CASE_NAME}sResponse,
-  ${PASCAL_CASE_NAME}Response 
-} from '../types';
+import {
+  type ${PASCAL_CASE_NAME},
+  type Create${PASCAL_CASE_NAME}Input,
+  type ${PASCAL_CASE_NAME}sResponse,
+  type ${PASCAL_CASE_NAME}Response,
+  validate${PASCAL_CASE_NAME},
+} from '@/shared/types/${ENTITY_NAME}';
 
 const ${ENTITY_NAME}Keys = {
   all: ['${ENTITY_NAME}s'] as const,
@@ -118,8 +197,20 @@ export const use${PASCAL_CASE_NAME}s = () => {
         }
         throw new Error('Failed to fetch ${ENTITY_NAME}s');
       }
-      const data = await response.json() as ${PASCAL_CASE_NAME}sResponse;
-      return data;
+
+      const data = await response.json();
+      if ('${ENTITY_NAME}s' in data && Array.isArray(data.${ENTITY_NAME}s)) {
+        // Validate all ${ENTITY_NAME}s with zod
+        const validated${PASCAL_CASE_NAME}s = data.${ENTITY_NAME}s.map((${ENTITY_NAME}: unknown) => {
+          const validated = validate${PASCAL_CASE_NAME}(${ENTITY_NAME});
+          if (!validated) {
+            throw new Error('Invalid ${ENTITY_NAME} data received from server');
+          }
+          return validated;
+        });
+        return { ${ENTITY_NAME}s: validated${PASCAL_CASE_NAME}s } as ${PASCAL_CASE_NAME}sResponse;
+      }
+      throw new Error('Invalid response format');
     },
   });
 };
@@ -138,8 +229,17 @@ export const use${PASCAL_CASE_NAME} = (id: string) => {
         }
         throw new Error('Failed to fetch ${ENTITY_NAME}');
       }
-      const data = await response.json() as ${PASCAL_CASE_NAME}Response;
-      return data;
+
+      const data = await response.json();
+      if ('${ENTITY_NAME}' in data) {
+        // Validate the response ${ENTITY_NAME} data with zod
+        const validated${PASCAL_CASE_NAME} = validate${PASCAL_CASE_NAME}(data.${ENTITY_NAME});
+        if (!validated${PASCAL_CASE_NAME}) {
+          throw new Error('Invalid ${ENTITY_NAME} data received from server');
+        }
+        return { ${ENTITY_NAME}: validated${PASCAL_CASE_NAME} } as ${PASCAL_CASE_NAME}Response;
+      }
+      throw new Error('Invalid response format');
     },
     enabled: !!id,
   });
@@ -153,6 +253,7 @@ export const useCreate${PASCAL_CASE_NAME} = () => {
       const response = await apiClient.api.${ENTITY_NAME}s.\$post({
         json: input,
       });
+
       if (!response.ok) {
         const errorData = await response.json();
         if ('error' in errorData) {
@@ -160,56 +261,17 @@ export const useCreate${PASCAL_CASE_NAME} = () => {
         }
         throw new Error('Failed to create ${ENTITY_NAME}');
       }
-      const data = await response.json() as ${PASCAL_CASE_NAME}Response;
-      return data;
-    },
-    onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ${ENTITY_NAME}Keys.lists() });
-    },
-  });
-};
 
-export const useUpdate${PASCAL_CASE_NAME} = () => {
-  const queryClient = useQueryClient();
-  
-  return useMutation({
-    mutationFn: async ({ id, input }: { id: string; input: Update${PASCAL_CASE_NAME}Input }) => {
-      const response = await apiClient.api.${ENTITY_NAME}s[':id'].\$put({
-        param: { id },
-        json: input,
-      });
-      if (!response.ok) {
-        const errorData = await response.json();
-        if ('error' in errorData) {
-          throw new Error(errorData.error);
+      const data = await response.json();
+      if ('${ENTITY_NAME}' in data) {
+        // Validate the response ${ENTITY_NAME} data with zod
+        const validated${PASCAL_CASE_NAME} = validate${PASCAL_CASE_NAME}(data.${ENTITY_NAME});
+        if (!validated${PASCAL_CASE_NAME}) {
+          throw new Error('Invalid ${ENTITY_NAME} data received from server');
         }
-        throw new Error('Failed to update ${ENTITY_NAME}');
+        return { ${ENTITY_NAME}: validated${PASCAL_CASE_NAME} } as ${PASCAL_CASE_NAME}Response;
       }
-      const data = await response.json() as ${PASCAL_CASE_NAME}Response;
-      return data;
-    },
-    onSuccess: (data, variables) => {
-      queryClient.invalidateQueries({ queryKey: ${ENTITY_NAME}Keys.lists() });
-      queryClient.invalidateQueries({ queryKey: ${ENTITY_NAME}Keys.detail(variables.id) });
-    },
-  });
-};
-
-export const useDelete${PASCAL_CASE_NAME} = () => {
-  const queryClient = useQueryClient();
-  
-  return useMutation({
-    mutationFn: async (id: string) => {
-      const response = await apiClient.api.${ENTITY_NAME}s[':id'].\$delete({
-        param: { id },
-      });
-      if (!response.ok) {
-        const errorData = await response.json();
-        if ('error' in errorData) {
-          throw new Error(errorData.error);
-        }
-        throw new Error('Failed to delete ${ENTITY_NAME}');
-      }
+      throw new Error('Invalid response format');
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ${ENTITY_NAME}Keys.lists() });
@@ -226,13 +288,7 @@ else
     cat > "$FEATURE_DIR/api/hooks.spec.ts" << EOF
 import { describe, it, expect, vi, beforeEach } from 'vitest';
 import { renderHook, waitFor } from '@testing-library/react';
-import { 
-  use${PASCAL_CASE_NAME}s, 
-  use${PASCAL_CASE_NAME}, 
-  useCreate${PASCAL_CASE_NAME}, 
-  useUpdate${PASCAL_CASE_NAME}, 
-  useDelete${PASCAL_CASE_NAME} 
-} from './hooks';
+import { use${PASCAL_CASE_NAME}s, use${PASCAL_CASE_NAME}, useCreate${PASCAL_CASE_NAME} } from './hooks';
 import { testWrapper } from '@/test-utils';
 import { apiClient } from '@/shared/lib';
 
@@ -244,8 +300,6 @@ vi.mock('@/shared/lib', () => ({
         \$post: vi.fn(),
         ':id': {
           \$get: vi.fn(),
-          \$put: vi.fn(),
-          \$delete: vi.fn(),
         },
       },
     },
@@ -261,11 +315,12 @@ describe('${PASCAL_CASE_NAME} API hooks', () => {
     it('should fetch ${ENTITY_NAME}s successfully', async () => {
       const mock${PASCAL_CASE_NAME}s = [
         { 
-          id: '1', 
+          id: '550e8400-e29b-41d4-a716-446655440001', 
           name: 'Test ${PASCAL_CASE_NAME}',
           description: 'Test description',
           createdAt: new Date().toISOString(),
           updatedAt: new Date().toISOString(),
+          deletedAt: null,
         },
       ];
       
@@ -301,16 +356,45 @@ describe('${PASCAL_CASE_NAME} API hooks', () => {
 
       expect(result.current.error?.message).toBe('Server error');
     });
+
+    it('should handle invalid ${ENTITY_NAME} data', async () => {
+      const invalid${PASCAL_CASE_NAME}s = [
+        { 
+          id: 'invalid-uuid', // Invalid UUID
+          name: 'Test ${PASCAL_CASE_NAME}',
+          description: 'Test description',
+          createdAt: new Date().toISOString(),
+          updatedAt: new Date().toISOString(),
+          deletedAt: null,
+        },
+      ];
+      
+      vi.mocked(apiClient.api.${ENTITY_NAME}s.\$get).mockResolvedValue({
+        ok: true,
+        json: async () => ({ ${ENTITY_NAME}s: invalid${PASCAL_CASE_NAME}s }),
+      } as Response);
+
+      const { result } = renderHook(() => use${PASCAL_CASE_NAME}s(), {
+        wrapper: testWrapper,
+      });
+
+      await waitFor(() => {
+        expect(result.current.isError).toBe(true);
+      });
+
+      expect(result.current.error?.message).toBe('Invalid ${ENTITY_NAME} data received from server');
+    });
   });
 
   describe('use${PASCAL_CASE_NAME}', () => {
     it('should fetch single ${ENTITY_NAME} successfully', async () => {
       const mock${PASCAL_CASE_NAME} = { 
-        id: '1', 
+        id: '550e8400-e29b-41d4-a716-446655440001', 
         name: 'Test ${PASCAL_CASE_NAME}',
         description: 'Test description',
         createdAt: new Date().toISOString(),
         updatedAt: new Date().toISOString(),
+        deletedAt: null,
       };
       
       vi.mocked(apiClient.api.${ENTITY_NAME}s[':id'].\$get).mockResolvedValue({
@@ -318,7 +402,7 @@ describe('${PASCAL_CASE_NAME} API hooks', () => {
         json: async () => ({ ${ENTITY_NAME}: mock${PASCAL_CASE_NAME} }),
       } as Response);
 
-      const { result } = renderHook(() => use${PASCAL_CASE_NAME}('1'), {
+      const { result } = renderHook(() => use${PASCAL_CASE_NAME}('550e8400-e29b-41d4-a716-446655440001'), {
         wrapper: testWrapper,
       });
 
@@ -333,11 +417,12 @@ describe('${PASCAL_CASE_NAME} API hooks', () => {
   describe('useCreate${PASCAL_CASE_NAME}', () => {
     it('should create ${ENTITY_NAME} successfully', async () => {
       const new${PASCAL_CASE_NAME} = { 
-        id: '1', 
+        id: '550e8400-e29b-41d4-a716-446655440001', 
         name: 'New ${PASCAL_CASE_NAME}',
         description: 'New description',
         createdAt: new Date().toISOString(),
         updatedAt: new Date().toISOString(),
+        deletedAt: null,
       };
       
       vi.mocked(apiClient.api.${ENTITY_NAME}s.\$post).mockResolvedValue({
@@ -362,56 +447,6 @@ describe('${PASCAL_CASE_NAME} API hooks', () => {
       });
     });
   });
-
-  describe('useUpdate${PASCAL_CASE_NAME}', () => {
-    it('should update ${ENTITY_NAME} successfully', async () => {
-      const updated${PASCAL_CASE_NAME} = { 
-        id: '1', 
-        name: 'Updated ${PASCAL_CASE_NAME}',
-        description: 'Original description',
-        createdAt: new Date().toISOString(),
-        updatedAt: new Date().toISOString(),
-      };
-      
-      vi.mocked(apiClient.api.${ENTITY_NAME}s[':id'].\$put).mockResolvedValue({
-        ok: true,
-        json: async () => ({ ${ENTITY_NAME}: updated${PASCAL_CASE_NAME} }),
-      } as Response);
-
-      const { result } = renderHook(() => useUpdate${PASCAL_CASE_NAME}(), {
-        wrapper: testWrapper,
-      });
-
-      await result.current.mutateAsync({ 
-        id: '1',
-        input: { name: 'Updated ${PASCAL_CASE_NAME}' }
-      });
-
-      expect(apiClient.api.${ENTITY_NAME}s[':id'].\$put).toHaveBeenCalledWith({
-        param: { id: '1' },
-        json: { name: 'Updated ${PASCAL_CASE_NAME}' },
-      });
-    });
-  });
-
-  describe('useDelete${PASCAL_CASE_NAME}', () => {
-    it('should delete ${ENTITY_NAME} successfully', async () => {
-      vi.mocked(apiClient.api.${ENTITY_NAME}s[':id'].\$delete).mockResolvedValue({
-        ok: true,
-        json: async () => ({ message: 'Deleted successfully' }),
-      } as Response);
-
-      const { result } = renderHook(() => useDelete${PASCAL_CASE_NAME}(), {
-        wrapper: testWrapper,
-      });
-
-      await result.current.mutateAsync('1');
-
-      expect(apiClient.api.${ENTITY_NAME}s[':id'].\$delete).toHaveBeenCalledWith({
-        param: { id: '1' },
-      });
-    });
-  });
 });
 EOF
 fi
@@ -425,129 +460,159 @@ export * from './hooks';
 EOF
 fi
 
-# Create form component
+# Create form component with real-time validation
 if [ "$DRY_RUN" = true ]; then
     echo "Would create file: $FEATURE_DIR/ui/${ENTITY_NAME}-form.tsx"
 else
     cat > "$FEATURE_DIR/ui/${ENTITY_NAME}-form.tsx" << EOF
-import { FC, FormEvent, useState, useEffect } from 'react';
-import { Button, Input, Card } from '@/shared/ui';
-import { useCreate${PASCAL_CASE_NAME}, useUpdate${PASCAL_CASE_NAME} } from '../api';
-import type { ${PASCAL_CASE_NAME}, Create${PASCAL_CASE_NAME}Input, Update${PASCAL_CASE_NAME}Input } from '../types';
+import { FC, FormEvent, useState } from 'react';
+import { Button, Input } from '@/shared/ui';
+import { useCreate${PASCAL_CASE_NAME} } from '../api';
+import {
+  type Create${PASCAL_CASE_NAME}Input,
+  validateCreate${PASCAL_CASE_NAME}InputWithErrors,
+} from '@/shared/types/${ENTITY_NAME}';
 
 interface ${PASCAL_CASE_NAME}FormProps {
-  ${ENTITY_NAME}?: ${PASCAL_CASE_NAME};
   onSuccess?: () => void;
-  onCancel?: () => void;
 }
 
-export const ${PASCAL_CASE_NAME}Form: FC<${PASCAL_CASE_NAME}FormProps> = ({ 
-  ${ENTITY_NAME}, 
-  onSuccess, 
-  onCancel 
-}) => {
-  const [formData, setFormData] = useState<Create${PASCAL_CASE_NAME}Input>({
-    name: ${ENTITY_NAME}?.name || '',
-    description: ${ENTITY_NAME}?.description || '',
-  });
+export const ${PASCAL_CASE_NAME}Form: FC<${PASCAL_CASE_NAME}FormProps> = ({ onSuccess }) => {
+  const [name, setName] = useState('');
+  const [description, setDescription] = useState('');
+  const [nameError, setNameError] = useState('');
+  const [descriptionError, setDescriptionError] = useState('');
+  const { mutate: create${PASCAL_CASE_NAME}, isPending, error } = useCreate${PASCAL_CASE_NAME}();
 
-  const { mutate: create${PASCAL_CASE_NAME}, isPending: isCreating, error: createError } = useCreate${PASCAL_CASE_NAME}();
-  const { mutate: update${PASCAL_CASE_NAME}, isPending: isUpdating, error: updateError } = useUpdate${PASCAL_CASE_NAME}();
-
-  const isPending = isCreating || isUpdating;
-  const error = createError || updateError;
-  const isEditMode = !!${ENTITY_NAME};
-
-  useEffect(() => {
-    if (${ENTITY_NAME}) {
-      setFormData({
-        name: ${ENTITY_NAME}.name,
-        description: ${ENTITY_NAME}.description,
-      });
+  const validateForm = (): Create${PASCAL_CASE_NAME}Input | null => {
+    const validation = validateCreate${PASCAL_CASE_NAME}InputWithErrors({ name, description });
+    if (validation.success) {
+      setNameError('');
+      setDescriptionError('');
+      return validation.data;
     }
-  }, [${ENTITY_NAME}]);
 
-  const handleSubmit = (e: FormEvent) => {
-    e.preventDefault();
+    setNameError(validation.errors?.name || '');
+    setDescriptionError(validation.errors?.description || '');
+    return null;
+  };
+
+  const handleNameChange = (value: string) => {
+    setName(value);
     
-    if (isEditMode && ${ENTITY_NAME}) {
-      const updateData: Update${PASCAL_CASE_NAME}Input = {};
-      if (formData.name !== ${ENTITY_NAME}.name) updateData.name = formData.name;
-      if (formData.description !== ${ENTITY_NAME}.description) updateData.description = formData.description;
-      
-      if (Object.keys(updateData).length > 0) {
-        update${PASCAL_CASE_NAME}(
-          { id: ${ENTITY_NAME}.id, input: updateData },
-          {
-            onSuccess: () => {
-              onSuccess?.();
-            },
-          }
-        );
+    // Real-time validation for name
+    if (value.trim()) {
+      const validation = validateCreate${PASCAL_CASE_NAME}InputWithErrors({
+        name: value,
+        description: description || undefined,
+      });
+      if (!validation.success && validation.errors?.name) {
+        setNameError(validation.errors.name);
       } else {
-        onCancel?.();
+        setNameError('');
       }
     } else {
-      create${PASCAL_CASE_NAME}(formData, {
-        onSuccess: () => {
-          setFormData({ name: '', description: '' });
-          onSuccess?.();
-        },
-      });
+      setNameError('');
     }
   };
 
+  const handleDescriptionChange = (value: string) => {
+    setDescription(value);
+    
+    // Real-time validation for description
+    if (value.trim()) {
+      const validation = validateCreate${PASCAL_CASE_NAME}InputWithErrors({
+        name: name || 'ValidName', // Dummy value for other field
+        description: value,
+      });
+      if (!validation.success && validation.errors?.description) {
+        setDescriptionError(validation.errors.description);
+      } else {
+        setDescriptionError('');
+      }
+    } else {
+      setDescriptionError('');
+    }
+  };
+
+  const isFormValid = name.trim() && !nameError && !descriptionError;
+
+  const handleSubmit = (e: FormEvent) => {
+    e.preventDefault();
+
+    // Validate form with zod
+    const validatedInput = validateForm();
+    if (!validatedInput) {
+      return;
+    }
+
+    create${PASCAL_CASE_NAME}(validatedInput, {
+      onSuccess: () => {
+        setName('');
+        setDescription('');
+        setNameError('');
+        setDescriptionError('');
+        onSuccess?.();
+      },
+    });
+  };
+
   return (
-    <Card>
-      <h3 className="text-lg font-semibold mb-4">
-        {isEditMode ? 'Edit ${PASCAL_CASE_NAME}' : 'Create New ${PASCAL_CASE_NAME}'}
-      </h3>
-      <form onSubmit={handleSubmit} className="space-y-4">
-        <div>
-          <label htmlFor="name" className="block text-sm font-medium mb-1">
-            Name
-          </label>
-          <Input
-            id="name"
-            type="text"
-            placeholder="Enter name"
-            value={formData.name}
-            onChange={(e) => setFormData({ ...formData, name: e.target.value })}
-            required
-          />
+    <form
+      onSubmit={handleSubmit}
+      className="space-y-4"
+      noValidate
+      aria-label="Create new ${ENTITY_NAME}"
+    >
+      <Input
+        label="Name"
+        type="text"
+        value={name}
+        onChange={handleNameChange}
+        placeholder="Enter ${ENTITY_NAME} name"
+        isRequired
+        isDisabled={isPending}
+        error={nameError}
+        autoComplete="off"
+        aria-describedby={nameError ? 'name-error' : undefined}
+      />
+
+      <Input
+        label="Description"
+        type="text"
+        value={description}
+        onChange={handleDescriptionChange}
+        placeholder="Enter description (optional)"
+        isDisabled={isPending}
+        error={descriptionError}
+        autoComplete="off"
+        aria-describedby={descriptionError ? 'description-error' : undefined}
+      />
+
+      {error && (
+        <div
+          className="text-red-600 text-sm p-3 bg-red-50 border border-red-200 rounded-md"
+          role="alert"
+          aria-live="polite"
+        >
+          <strong>Error:</strong> {error.message}
         </div>
-        
-        <div>
-          <label htmlFor="description" className="block text-sm font-medium mb-1">
-            Description
-          </label>
-          <textarea
-            id="description"
-            className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
-            placeholder="Enter description"
-            value={formData.description}
-            onChange={(e) => setFormData({ ...formData, description: e.target.value })}
-            rows={3}
-            required
-          />
+      )}
+
+      <Button
+        type="submit"
+        isDisabled={isPending || !isFormValid}
+        aria-describedby={isPending ? 'submit-status' : undefined}
+      >
+        {isPending ? 'Creating...' : 'Create ${PASCAL_CASE_NAME}'}
+      </Button>
+
+      {isPending && (
+        <div id="submit-status" className="sr-only" aria-live="polite">
+          Creating ${ENTITY_NAME}, please wait...
         </div>
-        
-        {error && (
-          <div className="text-red-600 text-sm">{error.message}</div>
-        )}
-        
-        <div className="flex gap-2">
-          <Button type="submit" disabled={isPending}>
-            {isPending ? (isEditMode ? 'Updating...' : 'Creating...') : (isEditMode ? 'Update' : 'Create')}
-          </Button>
-          {onCancel && (
-            <Button type="button" variant="secondary" onClick={onCancel}>
-              Cancel
-            </Button>
-          )}
-        </div>
-      </form>
-    </Card>
+      )}
+    </form>
   );
 };
 EOF
@@ -558,16 +623,12 @@ if [ "$DRY_RUN" = true ]; then
     echo "Would create file: $FEATURE_DIR/ui/${ENTITY_NAME}-list.tsx"
 else
     cat > "$FEATURE_DIR/ui/${ENTITY_NAME}-list.tsx" << EOF
-import { FC, useState } from 'react';
-import { Card, Button } from '@/shared/ui';
-import { use${PASCAL_CASE_NAME}s, useDelete${PASCAL_CASE_NAME} } from '../api';
-import { ${PASCAL_CASE_NAME}Form } from './${ENTITY_NAME}-form';
-import type { ${PASCAL_CASE_NAME} } from '../types';
+import { FC } from 'react';
+import { Card } from '@/shared/ui';
+import { use${PASCAL_CASE_NAME}s } from '../api';
 
 export const ${PASCAL_CASE_NAME}List: FC = () => {
   const { data, isLoading, error } = use${PASCAL_CASE_NAME}s();
-  const { mutate: delete${PASCAL_CASE_NAME}, isPending: isDeleting } = useDelete${PASCAL_CASE_NAME}();
-  const [editing${PASCAL_CASE_NAME}, setEditing${PASCAL_CASE_NAME}] = useState<${PASCAL_CASE_NAME} | null>(null);
 
   if (isLoading) {
     return (
@@ -587,22 +648,6 @@ export const ${PASCAL_CASE_NAME}List: FC = () => {
 
   const ${ENTITY_NAME}s = data?.${ENTITY_NAME}s || [];
 
-  const handleDelete = (id: string) => {
-    if (confirm('Are you sure you want to delete this ${ENTITY_NAME}?')) {
-      delete${PASCAL_CASE_NAME}(id);
-    }
-  };
-
-  if (editing${PASCAL_CASE_NAME}) {
-    return (
-      <${PASCAL_CASE_NAME}Form
-        ${ENTITY_NAME}={editing${PASCAL_CASE_NAME}}
-        onSuccess={() => setEditing${PASCAL_CASE_NAME}(null)}
-        onCancel={() => setEditing${PASCAL_CASE_NAME}(null)}
-      />
-    );
-  }
-
   return (
     <div className="space-y-4">
       {${ENTITY_NAME}s.length === 0 ? (
@@ -617,27 +662,12 @@ export const ${PASCAL_CASE_NAME}List: FC = () => {
             <div className="flex justify-between items-start">
               <div className="flex-1">
                 <h3 className="text-lg font-semibold">{${ENTITY_NAME}.name}</h3>
-                <p className="text-gray-600 mt-1">{${ENTITY_NAME}.description}</p>
+                {${ENTITY_NAME}.description && (
+                  <p className="text-gray-600 mt-1">{${ENTITY_NAME}.description}</p>
+                )}
                 <p className="text-sm text-gray-400 mt-2">
                   Created: {new Date(${ENTITY_NAME}.createdAt).toLocaleDateString()}
                 </p>
-              </div>
-              <div className="flex gap-2 ml-4">
-                <Button
-                  variant="secondary"
-                  size="small"
-                  onClick={() => setEditing${PASCAL_CASE_NAME}(${ENTITY_NAME})}
-                >
-                  Edit
-                </Button>
-                <Button
-                  variant="danger"
-                  size="small"
-                  onClick={() => handleDelete(${ENTITY_NAME}.id)}
-                  disabled={isDeleting}
-                >
-                  Delete
-                </Button>
               </div>
             </div>
           </Card>
@@ -667,11 +697,6 @@ vi.mock('../api', () => ({
     isPending: false,
     error: null,
   })),
-  useUpdate${PASCAL_CASE_NAME}: vi.fn(() => ({
-    mutate: vi.fn(),
-    isPending: false,
-    error: null,
-  })),
 }));
 
 describe('${PASCAL_CASE_NAME}Form', () => {
@@ -679,26 +704,9 @@ describe('${PASCAL_CASE_NAME}Form', () => {
     render(<${PASCAL_CASE_NAME}Form />, { wrapper: testWrapper });
     
     expect(screen.getByText('Create New ${PASCAL_CASE_NAME}')).toBeInTheDocument();
-    expect(screen.getByLabelText('Name')).toBeInTheDocument();
+    expect(screen.getByLabelText('Name *')).toBeInTheDocument();
     expect(screen.getByLabelText('Description')).toBeInTheDocument();
     expect(screen.getByRole('button', { name: 'Create' })).toBeInTheDocument();
-  });
-
-  it('should render edit form', () => {
-    const ${ENTITY_NAME} = {
-      id: '1',
-      name: 'Test ${PASCAL_CASE_NAME}',
-      description: 'Test description',
-      createdAt: new Date().toISOString(),
-      updatedAt: new Date().toISOString(),
-    };
-
-    render(<${PASCAL_CASE_NAME}Form ${ENTITY_NAME}={${ENTITY_NAME}} />, { wrapper: testWrapper });
-    
-    expect(screen.getByText('Edit ${PASCAL_CASE_NAME}')).toBeInTheDocument();
-    expect(screen.getByDisplayValue('Test ${PASCAL_CASE_NAME}')).toBeInTheDocument();
-    expect(screen.getByDisplayValue('Test description')).toBeInTheDocument();
-    expect(screen.getByRole('button', { name: 'Update' })).toBeInTheDocument();
   });
 
   it('should handle form submission for create', () => {
@@ -711,7 +719,7 @@ describe('${PASCAL_CASE_NAME}Form', () => {
 
     render(<${PASCAL_CASE_NAME}Form />, { wrapper: testWrapper });
     
-    fireEvent.change(screen.getByLabelText('Name'), { target: { value: 'New ${PASCAL_CASE_NAME}' } });
+    fireEvent.change(screen.getByLabelText('Name *'), { target: { value: 'New ${PASCAL_CASE_NAME}' } });
     fireEvent.change(screen.getByLabelText('Description'), { target: { value: 'New description' } });
     fireEvent.click(screen.getByRole('button', { name: 'Create' }));
     
@@ -721,7 +729,17 @@ describe('${PASCAL_CASE_NAME}Form', () => {
     );
   });
 
-  it('should display error message', () => {
+  it('should display validation errors', () => {
+    render(<${PASCAL_CASE_NAME}Form />, { wrapper: testWrapper });
+    
+    // Try to submit with empty name (should trigger validation error)
+    fireEvent.change(screen.getByLabelText('Name *'), { target: { value: '' } });
+    fireEvent.click(screen.getByRole('button', { name: 'Create' }));
+    
+    expect(screen.getByText('Name is required')).toBeInTheDocument();
+  });
+
+  it('should display API error message', () => {
     vi.mocked(hooks.useCreate${PASCAL_CASE_NAME}).mockReturnValue({
       mutate: vi.fn(),
       isPending: false,
@@ -731,6 +749,19 @@ describe('${PASCAL_CASE_NAME}Form', () => {
     render(<${PASCAL_CASE_NAME}Form />, { wrapper: testWrapper });
     
     expect(screen.getByText('Creation failed')).toBeInTheDocument();
+  });
+
+  it('should show pending state during submission', () => {
+    vi.mocked(hooks.useCreate${PASCAL_CASE_NAME}).mockReturnValue({
+      mutate: vi.fn(),
+      isPending: true,
+      error: null,
+    } as any);
+
+    render(<${PASCAL_CASE_NAME}Form />, { wrapper: testWrapper });
+    
+    expect(screen.getByText('Creating...')).toBeInTheDocument();
+    expect(screen.getByRole('button', { name: 'Creating...' })).toBeDisabled();
   });
 });
 EOF
@@ -744,10 +775,6 @@ import * as hooks from '../api';
 
 vi.mock('../api', () => ({
   use${PASCAL_CASE_NAME}s: vi.fn(),
-  useDelete${PASCAL_CASE_NAME}: vi.fn(() => ({
-    mutate: vi.fn(),
-    isPending: false,
-  })),
 }));
 
 describe('${PASCAL_CASE_NAME}List', () => {
@@ -790,11 +817,12 @@ describe('${PASCAL_CASE_NAME}List', () => {
   it('should display ${ENTITY_NAME}s', () => {
     const mock${PASCAL_CASE_NAME}s = [
       {
-        id: '1',
+        id: '550e8400-e29b-41d4-a716-446655440001',
         name: 'Test ${PASCAL_CASE_NAME}',
         description: 'Test description',
         createdAt: new Date().toISOString(),
         updatedAt: new Date().toISOString(),
+        deletedAt: null,
       },
     ];
 
@@ -808,8 +836,30 @@ describe('${PASCAL_CASE_NAME}List', () => {
     
     expect(screen.getByText('Test ${PASCAL_CASE_NAME}')).toBeInTheDocument();
     expect(screen.getByText('Test description')).toBeInTheDocument();
-    expect(screen.getByRole('button', { name: 'Edit' })).toBeInTheDocument();
-    expect(screen.getByRole('button', { name: 'Delete' })).toBeInTheDocument();
+  });
+
+  it('should handle ${ENTITY_NAME}s without description', () => {
+    const mock${PASCAL_CASE_NAME}s = [
+      {
+        id: '550e8400-e29b-41d4-a716-446655440001',
+        name: 'Test ${PASCAL_CASE_NAME}',
+        description: null,
+        createdAt: new Date().toISOString(),
+        updatedAt: new Date().toISOString(),
+        deletedAt: null,
+      },
+    ];
+
+    vi.mocked(hooks.use${PASCAL_CASE_NAME}s).mockReturnValue({
+      data: { ${ENTITY_NAME}s: mock${PASCAL_CASE_NAME}s },
+      isLoading: false,
+      error: null,
+    } as any);
+
+    render(<${PASCAL_CASE_NAME}List />, { wrapper: testWrapper });
+    
+    expect(screen.getByText('Test ${PASCAL_CASE_NAME}')).toBeInTheDocument();
+    expect(screen.queryByText('null')).not.toBeInTheDocument();
   });
 });
 EOF
@@ -832,28 +882,38 @@ else
     cat > "$FEATURE_DIR/index.ts" << EOF
 export * from './api';
 export * from './ui';
-export * from './types';
 EOF
 fi
 
 if [ "$DRY_RUN" = true ]; then
     echo "✅ DRY RUN completed for frontend feature '${FEATURE_NAME}'"
     echo "📁 Would create in: $FEATURE_DIR"
+    echo "📁 Would create shared types in: frontend/src/shared/types/${ENTITY_NAME}.ts"
     echo ""
     echo "Would create:"
-    echo "  - Type definitions"
-    echo "  - API hooks (React Query)"
-    echo "  - UI components: Form and List"
-    echo "  - Complete test suites"
+    echo "  - Shared type definitions (imports backend types)"
+    echo "  - API hooks with zod validation (React Query)"
+    echo "  - UI components: Form with validation and List"
+    echo "  - Complete test suites with UUID test data"
+    echo "  - Frontend validation helpers with error details"
 else
     echo "✅ Frontend feature '${FEATURE_NAME}' created successfully!"
     echo "📁 Created in: $FEATURE_DIR"
+    echo "📁 Created shared types in: frontend/src/shared/types/${ENTITY_NAME}.ts"
+    echo ""
+    echo "✨ Features implemented:"
+    echo "  - ✅ Backend type imports (no duplication)"
+    echo "  - ✅ Zod validation with error handling"
+    echo "  - ✅ UUID-based IDs with branded types"
+    echo "  - ✅ Frontend form validation with field errors"
+    echo "  - ✅ API response validation"
+    echo "  - ✅ Comprehensive test coverage"
 fi
 echo ""
 echo "Next steps:"
-echo "1. Update the types in types.ts according to your domain"
-echo "2. Modify the form fields in ui/${ENTITY_NAME}-form.tsx"
-echo "3. Create a widget that uses these components:"
+echo "1. Create a widget that uses these components:"
 echo "   ./tools/frontend/create-widget.sh ${ENTITY_NAME}-management"
-echo "4. Add the widget to a page"
-echo "5. Run tests: yarn workspace @spa-hono/frontend test"
+echo "2. Add the widget to a page"
+echo "3. Ensure backend entity and routes are properly set up"
+echo "4. Run tests: yarn workspace @spa-hono/frontend test"
+echo "5. Test the full flow: yarn dev"

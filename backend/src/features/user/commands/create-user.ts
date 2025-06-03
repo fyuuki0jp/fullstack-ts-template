@@ -1,36 +1,30 @@
 import { depend } from 'velona';
-import { err } from '@fyuuki0jp/railway-result';
+import { isErr } from '@fyuuki0jp/railway-result';
 import type { Result } from '@fyuuki0jp/railway-result';
-import type { User } from '../../../entities';
-import type { UserRepository } from '../domain/repository';
-
-export interface CreateUserInput {
-  email: string;
-  name: string;
-}
+import {
+  type User,
+  UserEntity,
+  validateCreateUserInput,
+} from '../../../entities';
+import type { DrizzleDb } from '../../../shared/adapters/db/pglite';
 
 export const createUser = depend(
-  { userRepository: {} as UserRepository },
-  ({ userRepository }) =>
-    async (input: CreateUserInput): Promise<Result<User, Error>> => {
-      // Trim input
-      const email = input.email?.trim() || '';
-      const name = input.name?.trim() || '';
-
-      // Validate input
-      if (!email || !name) {
-        return err(new Error('Email and name are required'));
+  { db: {} as DrizzleDb },
+  ({ db }) =>
+    async (input: unknown): Promise<Result<User, Error>> => {
+      // Validate input using domain helper
+      const validationResult = validateCreateUserInput(input);
+      if (isErr(validationResult)) {
+        return validationResult;
       }
 
-      // Basic email validation
-      if (!email.includes('@') || email.split('@').length !== 2) {
-        return err(new Error('Invalid email format'));
-      }
+      const validatedInput = validationResult.data;
 
-      // Create user
-      return userRepository.create({
-        email,
-        name,
+      // Create user using entity
+      const userEntity = UserEntity.inject({ db })();
+      return userEntity.create({
+        email: validatedInput.email,
+        name: validatedInput.name,
       });
     }
 );

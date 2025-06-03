@@ -1,12 +1,13 @@
 import { depend } from 'velona';
 import type { Result } from '@fyuuki0jp/railway-result';
-import type { User } from '../../../entities';
-import type { UserRepository } from '../domain/repository';
+import { type User, UserEntity } from '../../../entities';
+import type { DrizzleDb } from '../../../shared/adapters/db/pglite';
 
 export const getUsers = depend(
-  { userRepository: {} as UserRepository },
-  ({ userRepository }) =>
+  { db: {} as DrizzleDb },
+  ({ db }) =>
     async (): Promise<Result<User[], Error>> => {
-      return userRepository.findAll();
+      const userEntity = UserEntity.inject({ db })();
+      return userEntity.findAll();
     }
 );

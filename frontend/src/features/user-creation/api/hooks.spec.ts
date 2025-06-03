@@ -3,6 +3,7 @@ import { renderHook, waitFor, act } from '@testing-library/react';
 import { describe, it, expect, vi, beforeEach } from 'vitest';
 import { useCreateUser } from './hooks';
 import { createTestWrapper } from '@/test-utils';
+import type { CreateUserInput } from '@/shared/types/user';
 
 // Mock the API client
 vi.mock('@/shared/lib', () => ({
@@ -24,11 +25,12 @@ describe('useCreateUser', () => {
 
   it('successfully creates a user', async () => {
     const mockUser = {
-      id: '1',
+      id: '550e8400-e29b-41d4-a716-446655440001',
       name: 'John Doe',
       email: 'john@example.com',
       createdAt: '2023-01-01T00:00:00Z',
       updatedAt: '2023-01-01T00:00:00Z',
+      deletedAt: null,
     };
 
     const mockResponse = {
@@ -46,9 +48,9 @@ describe('useCreateUser', () => {
 
     expect(result.current.isPending).toBe(false);
 
-    const createUserInput = {
-      name: 'John Doe',
-      email: 'john@example.com',
+    const createUserInput: CreateUserInput = {
+      name: 'John Doe' as any,
+      email: 'john@example.com' as any,
     };
 
     act(() => {
@@ -80,9 +82,9 @@ describe('useCreateUser', () => {
       wrapper: createTestWrapper(),
     });
 
-    const createUserInput = {
-      name: 'John Doe',
-      email: 'john@example.com',
+    const createUserInput: CreateUserInput = {
+      name: 'John Doe' as any,
+      email: 'john@example.com' as any,
     };
 
     result.current.mutate(createUserInput);
@@ -104,9 +106,9 @@ describe('useCreateUser', () => {
       wrapper: createTestWrapper(),
     });
 
-    const createUserInput = {
-      name: 'John Doe',
-      email: 'john@example.com',
+    const createUserInput: CreateUserInput = {
+      name: 'John Doe' as any,
+      email: 'john@example.com' as any,
     };
 
     result.current.mutate(createUserInput);
@@ -133,9 +135,9 @@ describe('useCreateUser', () => {
       wrapper: createTestWrapper(),
     });
 
-    const createUserInput = {
-      name: 'John Doe',
-      email: 'john@example.com',
+    const createUserInput: CreateUserInput = {
+      name: 'John Doe' as any,
+      email: 'john@example.com' as any,
     };
 
     result.current.mutate(createUserInput);
@@ -150,11 +152,12 @@ describe('useCreateUser', () => {
 
   it('calls onSuccess callback and invalidates queries', async () => {
     const mockUser = {
-      id: '1',
+      id: '550e8400-e29b-41d4-a716-446655440001',
       name: 'John Doe',
       email: 'john@example.com',
       createdAt: '2023-01-01T00:00:00Z',
       updatedAt: '2023-01-01T00:00:00Z',
+      deletedAt: null,
     };
 
     const mockResponse = {
@@ -172,9 +175,9 @@ describe('useCreateUser', () => {
       wrapper: createTestWrapper(),
     });
 
-    const createUserInput = {
-      name: 'John Doe',
-      email: 'john@example.com',
+    const createUserInput: CreateUserInput = {
+      name: 'John Doe' as any,
+      email: 'john@example.com' as any,
     };
 
     act(() => {

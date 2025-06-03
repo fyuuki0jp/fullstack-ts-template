@@ -81,589 +81,224 @@ fi
 # Create repository interface
 create_file "$FEATURE_DIR/domain/repository.ts" "\
 import type { Result } from '@fyuuki0jp/railway-result';
-import type { ${PASCAL_CASE_NAME}, Create${PASCAL_CASE_NAME}Input, Update${PASCAL_CASE_NAME}Input } from '../../../entities/${ENTITY_NAME}';
+import type { ${PASCAL_CASE_NAME}, Create${PASCAL_CASE_NAME}Input, ${PASCAL_CASE_NAME}Id } from '../../../entities/${ENTITY_NAME}';
 
 export interface ${PASCAL_CASE_NAME}Repository {
   create(input: Create${PASCAL_CASE_NAME}Input): Promise<Result<${PASCAL_CASE_NAME}, Error>>;
   findAll(): Promise<Result<${PASCAL_CASE_NAME}[], Error>>;
-  findById(id: string): Promise<Result<${PASCAL_CASE_NAME} | null, Error>>;
-  update(id: string, input: Update${PASCAL_CASE_NAME}Input): Promise<Result<${PASCAL_CASE_NAME}, Error>>;
-  delete(id: string): Promise<Result<void, Error>>;
+  findById(id: ${PASCAL_CASE_NAME}Id): Promise<Result<${PASCAL_CASE_NAME} | null, Error>>;
 }
-EOF
+"
 
 # Create repository implementation
 create_file "$FEATURE_DIR/domain/${ENTITY_NAME}-repository-impl.ts" "\
 import { depend } from 'velona';
-import { ok, err } from '@fyuuki0jp/railway-result';
+import { ok, err, isErr } from '@fyuuki0jp/railway-result';
 import type { Result } from '@fyuuki0jp/railway-result';
 import type { DbAdapter } from '../../../shared/adapters/db';
-import type { ${PASCAL_CASE_NAME}Repository } from './repository';
-import type { ${PASCAL_CASE_NAME}, Create${PASCAL_CASE_NAME}Input, Update${PASCAL_CASE_NAME}Input } from '../../../entities/${ENTITY_NAME}';
+import {
+  type ${PASCAL_CASE_NAME},
+  type Create${PASCAL_CASE_NAME}Input,
+  type ${PASCAL_CASE_NAME}Id,
+  validate${PASCAL_CASE_NAME},
+  create${PASCAL_CASE_NAME}Id,
+} from '../../../entities/${ENTITY_NAME}';
 
-interface DatabaseRow {
-  id: string;
-  name: string;
-  description: string;
-  created_at: string;
-  updated_at: string;
-}
+export const ${ENTITY_NAME}RepositoryImpl = depend({ db: {} as DbAdapter }, ({ db }) => ({
+  async create(input: Create${PASCAL_CASE_NAME}Input): Promise<Result<${PASCAL_CASE_NAME}, Error>> {
+    const idResult = create${PASCAL_CASE_NAME}Id();
+    if (isErr(idResult)) {
+      return idResult;
+    }
 
-const rowToEntity = (row: DatabaseRow): ${PASCAL_CASE_NAME} => ({
-  id: row.id,
-  name: row.name,
-  description: row.description,
-  createdAt: new Date(row.created_at),
-  updatedAt: new Date(row.updated_at),
-});
+    const now = new Date();
 
-export const ${ENTITY_NAME}RepositoryImpl = depend(
-  { db: (undefined as unknown) as DbAdapter },
-  ({ db }): ${PASCAL_CASE_NAME}Repository => ({
-    async create(input: Create${PASCAL_CASE_NAME}Input): Promise<Result<${PASCAL_CASE_NAME}, Error>> {
-      const id = crypto.randomUUID();
-      const now = new Date().toISOString();
-      
-      const result = await db.execute(
-        'INSERT INTO ${ENTITY_NAME}s (id, name, description, created_at, updated_at) VALUES (?, ?, ?, ?, ?)',
-        [id, input.name, input.description, now, now]
-      );
+    const ${ENTITY_NAME}Data: ${PASCAL_CASE_NAME} = {
+      id: idResult.data,
+      name: input.name,
+      description: input.description,
+      createdAt: now,
+      updatedAt: now,
+      deletedAt: null,
+    };
 
-      if (!result.success) {
-        return err(result.error);
-      }
+    const result = await db.execute(
+      \`INSERT INTO ${ENTITY_NAME}s (id, name, description, created_at, updated_at, deleted_at) 
+         VALUES (?, ?, ?, ?, ?, ?)\`,
+      [
+        ${ENTITY_NAME}Data.id,
+        ${ENTITY_NAME}Data.name,
+        ${ENTITY_NAME}Data.description || null,
+        ${ENTITY_NAME}Data.createdAt.toISOString(),
+        ${ENTITY_NAME}Data.updatedAt.toISOString(),
+        ${ENTITY_NAME}Data.deletedAt?.toISOString() || null,
+      ]
+    );
 
-      return ok({
-        id,
-        ...input,
-        createdAt: new Date(now),
-        updatedAt: new Date(now),
-      });
-    },
+    if (isErr(result)) {
+      return err(result.error);
+    }
 
-    async findAll(): Promise<Result<${PASCAL_CASE_NAME}[], Error>> {
-      const result = await db.query<DatabaseRow>(
-        'SELECT * FROM ${ENTITY_NAME}s ORDER BY created_at DESC'
-      );
+    return ok(${ENTITY_NAME}Data);
+  },
 
-      if (!result.success) {
-        return err(result.error);
-      }
+  async findAll(): Promise<Result<${PASCAL_CASE_NAME}[], Error>> {
+    const result = await db.query<{
+      id: string;
+      name: string;
+      description: string | null;
+      created_at: string;
+      updated_at: string;
+      deleted_at: string | null;
+    }>(
+      'SELECT id, name, description, created_at, updated_at, deleted_at FROM ${ENTITY_NAME}s WHERE deleted_at IS NULL ORDER BY created_at DESC'
+    );
 
-      return ok(result.data.map(rowToEntity));
-    },
+    if (isErr(result)) {
+      return err(result.error);
+    }
 
-    async findById(id: string): Promise<Result<${PASCAL_CASE_NAME} | null, Error>> {
-      const result = await db.query<DatabaseRow>(
-        'SELECT * FROM ${ENTITY_NAME}s WHERE id = ?',
-        [id]
-      );
-
-      if (!result.success) {
-        return err(result.error);
-      }
-
-      if (result.data.length === 0) {
-        return ok(null);
-      }
-
-      return ok(rowToEntity(result.data[0]));
-    },
-
-    async update(id: string, input: Update${PASCAL_CASE_NAME}Input): Promise<Result<${PASCAL_CASE_NAME}, Error>> {
-      const findResult = await this.findById(id);
-      if (!findResult.success) {
-        return err(findResult.error);
-      }
-
-      if (!findResult.data) {
-        return err(new Error('${PASCAL_CASE_NAME} not found'));
-      }
-
-      const updated = {
-        ...findResult.data,
-        ...input,
-        updatedAt: new Date(),
-      };
-
-      const result = await db.execute(
-        'UPDATE ${ENTITY_NAME}s SET name = ?, description = ?, updated_at = ? WHERE id = ?',
-        [updated.name, updated.description, updated.updatedAt.toISOString(), id]
-      );
-
-      if (!result.success) {
-        return err(result.error);
-      }
-
-      return ok(updated);
-    },
-
-    async delete(id: string): Promise<Result<void, Error>> {
-      return db.execute('DELETE FROM ${ENTITY_NAME}s WHERE id = ?', [id]);
-    },
-  })
-);
-EOF
-
-# Create repository implementation test
-create_file "$FEATURE_DIR/domain/${ENTITY_NAME}-repository-impl.spec.ts" "\
-import { describe, it, expect, beforeEach } from 'vitest';
-import { ${ENTITY_NAME}RepositoryImpl } from './${ENTITY_NAME}-repository-impl';
-import { MockDbAdapter } from '../../../shared/adapters/db/mock';
-import { isErr } from '@fyuuki0jp/railway-result';
-
-describe('${PASCAL_CASE_NAME}RepositoryImpl', () => {
-  let mockDb: MockDbAdapter;
-  let repository: ReturnType<typeof ${ENTITY_NAME}RepositoryImpl.inject>;
-
-  beforeEach(() => {
-    mockDb = new MockDbAdapter();
-    repository = ${ENTITY_NAME}RepositoryImpl.inject({ db: mockDb })();
-  });
-
-  describe('create', () => {
-    it('should create a new ${ENTITY_NAME}', async () => {
-      const input = { 
-        name: 'Test ${PASCAL_CASE_NAME}',
-        description: 'Test description'
-      };
-      const result = await repository.create(input);
-
-      expect(result.success).toBe(true);
-      if (result.success) {
-        expect(result.data.name).toBe(input.name);
-        expect(result.data.description).toBe(input.description);
-        expect(result.data.id).toBeDefined();
-        expect(result.data.createdAt).toBeInstanceOf(Date);
-        expect(result.data.updatedAt).toBeInstanceOf(Date);
-      }
-    });
-
-    it('should handle database errors', async () => {
-      mockDb.mockFailure('Database error');
-      const result = await repository.create({ 
-        name: 'Test', 
-        description: 'Test' 
+    const ${ENTITY_NAME}s: ${PASCAL_CASE_NAME}[] = [];
+    for (const row of result.data) {
+      const ${ENTITY_NAME}Result = validate${PASCAL_CASE_NAME}({
+        id: row.id,
+        name: row.name,
+        description: row.description,
+        createdAt: new Date(row.created_at),
+        updatedAt: new Date(row.updated_at),
+        deletedAt: row.deleted_at ? new Date(row.deleted_at) : null,
       });
 
-      expect(isErr(result)).toBe(true);
-      if (isErr(result)) {
-        expect(result.error.message).toBe('Database error');
+      if (isErr(${ENTITY_NAME}Result)) {
+        return err(
+          new Error(
+            \`Invalid ${ENTITY_NAME} data from database for id: \${row.id} - \${${ENTITY_NAME}Result.error.message}\`
+          )
+        );
       }
-    });
-  });
 
-  describe('findAll', () => {
-    it('should return all ${ENTITY_NAME}s', async () => {
-      const ${ENTITY_NAME}s = [
-        { 
-          id: '1', 
-          name: 'Test 1', 
-          description: 'Desc 1',
-          created_at: new Date().toISOString(), 
-          updated_at: new Date().toISOString() 
-        },
-        { 
-          id: '2', 
-          name: 'Test 2', 
-          description: 'Desc 2',
-          created_at: new Date().toISOString(), 
-          updated_at: new Date().toISOString() 
-        },
-      ];
-      mockDb.setData('${ENTITY_NAME}s', ${ENTITY_NAME}s);
+      ${ENTITY_NAME}s.push(${ENTITY_NAME}Result.data);
+    }
 
-      const result = await repository.findAll();
+    return ok(${ENTITY_NAME}s);
+  },
 
-      expect(result.success).toBe(true);
-      if (result.success) {
-        expect(result.data).toHaveLength(2);
-        expect(result.data[0].name).toBe('Test 1');
-        expect(result.data[0].createdAt).toBeInstanceOf(Date);
-      }
-    });
-  });
+  async findById(id: ${PASCAL_CASE_NAME}Id): Promise<Result<${PASCAL_CASE_NAME} | null, Error>> {
+    const result = await db.query<{
+      id: string;
+      name: string;
+      description: string | null;
+      created_at: string;
+      updated_at: string;
+      deleted_at: string | null;
+    }>(
+      'SELECT id, name, description, created_at, updated_at, deleted_at FROM ${ENTITY_NAME}s WHERE id = ? AND deleted_at IS NULL',
+      [id]
+    );
 
-  describe('findById', () => {
-    it('should return ${ENTITY_NAME} by id', async () => {
-      const ${ENTITY_NAME} = { 
-        id: '1', 
-        name: 'Test', 
-        description: 'Description',
-        created_at: new Date().toISOString(), 
-        updated_at: new Date().toISOString() 
-      };
-      mockDb.setData('${ENTITY_NAME}s', [${ENTITY_NAME}]);
+    if (isErr(result)) {
+      return err(result.error);
+    }
 
-      const result = await repository.findById('1');
+    if (result.data.length === 0) {
+      return ok(null);
+    }
 
-      expect(result.success).toBe(true);
-      if (result.success && result.data) {
-        expect(result.data.id).toBe('1');
-        expect(result.data.name).toBe('Test');
-      }
+    const row = result.data[0];
+    const ${ENTITY_NAME}Result = validate${PASCAL_CASE_NAME}({
+      id: row.id,
+      name: row.name,
+      description: row.description,
+      createdAt: new Date(row.created_at),
+      updatedAt: new Date(row.updated_at),
+      deletedAt: row.deleted_at ? new Date(row.deleted_at) : null,
     });
 
-    it('should return null for non-existent id', async () => {
-      mockDb.setData('${ENTITY_NAME}s', []);
+    if (isErr(${ENTITY_NAME}Result)) {
+      return err(
+        new Error(
+          \`Invalid ${ENTITY_NAME} data from database for id: \${row.id} - \${${ENTITY_NAME}Result.error.message}\`
+        )
+      );
+    }
 
-      const result = await repository.findById('non-existent');
+    return ok(${ENTITY_NAME}Result.data);
+  },
+}));
+"
 
-      expect(result.success).toBe(true);
-      if (result.success) {
-        expect(result.data).toBeNull();
-      }
-    });
-  });
-
-  describe('update', () => {
-    it('should update ${ENTITY_NAME}', async () => {
-      const existing = { 
-        id: '1', 
-        name: 'Old', 
-        description: 'Old desc',
-        created_at: new Date().toISOString(), 
-        updated_at: new Date().toISOString() 
-      };
-      mockDb.setData('${ENTITY_NAME}s', [existing]);
-
-      const result = await repository.update('1', { name: 'Updated' });
-
-      expect(result.success).toBe(true);
-      if (result.success) {
-        expect(result.data.name).toBe('Updated');
-        expect(result.data.description).toBe('Old desc');
-      }
-    });
-
-    it('should return error for non-existent ${ENTITY_NAME}', async () => {
-      mockDb.setData('${ENTITY_NAME}s', []);
-
-      const result = await repository.update('non-existent', { name: 'Updated' });
-
-      expect(isErr(result)).toBe(true);
-      if (isErr(result)) {
-        expect(result.error.message).toBe('${PASCAL_CASE_NAME} not found');
-      }
-    });
-  });
-
-  describe('delete', () => {
-    it('should delete ${ENTITY_NAME}', async () => {
-      const result = await repository.delete('1');
-
-      expect(result.success).toBe(true);
-    });
-  });
-});
-EOF
-
-# Create command - create
+# Create command
 create_file "$FEATURE_DIR/commands/create-${ENTITY_NAME}.ts" "\
 import { depend } from 'velona';
-import { err } from '@fyuuki0jp/railway-result';
+import { isErr } from '@fyuuki0jp/railway-result';
 import type { Result } from '@fyuuki0jp/railway-result';
+import { type ${PASCAL_CASE_NAME}, validateCreate${PASCAL_CASE_NAME}Input } from '../../../entities/${ENTITY_NAME}';
 import type { ${PASCAL_CASE_NAME}Repository } from '../domain/repository';
-import type { ${PASCAL_CASE_NAME}, Create${PASCAL_CASE_NAME}Input } from '../../../entities/${ENTITY_NAME}';
 
 export const create${PASCAL_CASE_NAME} = depend(
-  { ${ENTITY_NAME}Repository: (undefined as unknown) as ${PASCAL_CASE_NAME}Repository },
+  { ${ENTITY_NAME}Repository: {} as ${PASCAL_CASE_NAME}Repository },
   ({ ${ENTITY_NAME}Repository }) =>
-    async (input: Create${PASCAL_CASE_NAME}Input): Promise<Result<${PASCAL_CASE_NAME}, Error>> => {
-      // Business validation
-      if (!input.name || input.name.trim().length === 0) {
-        return err(new Error('Name is required'));
+    async (input: unknown): Promise<Result<${PASCAL_CASE_NAME}, Error>> => {
+      // Validate input using domain helper
+      const validationResult = validateCreate${PASCAL_CASE_NAME}Input(input);
+      if (isErr(validationResult)) {
+        return validationResult;
       }
 
-      if (input.name.length > 100) {
-        return err(new Error('Name must be less than 100 characters'));
-      }
+      const validatedInput = validationResult.data;
 
-      if (!input.description || input.description.trim().length === 0) {
-        return err(new Error('Description is required'));
-      }
-
-      if (input.description.length > 500) {
-        return err(new Error('Description must be less than 500 characters'));
-      }
-
-      return ${ENTITY_NAME}Repository.create(input);
+      // Create ${ENTITY_NAME}
+      return ${ENTITY_NAME}Repository.create({
+        name: validatedInput.name,
+        description: validatedInput.description,
+      });
     }
 );
-EOF
+"
 
-# Create command test
-create_file "$FEATURE_DIR/commands/create-${ENTITY_NAME}.spec.ts" "\
-import { describe, it, expect, beforeEach, vi } from 'vitest';
-import { create${PASCAL_CASE_NAME} } from './create-${ENTITY_NAME}';
-import { ok, err, isErr } from '@fyuuki0jp/railway-result';
-import type { ${PASCAL_CASE_NAME}Repository } from '../domain/repository';
-
-describe('create${PASCAL_CASE_NAME}', () => {
-  let mock${PASCAL_CASE_NAME}Repository: ${PASCAL_CASE_NAME}Repository;
-  let create${PASCAL_CASE_NAME}Cmd: ReturnType<typeof create${PASCAL_CASE_NAME}.inject>;
-
-  beforeEach(() => {
-    mock${PASCAL_CASE_NAME}Repository = {
-      create: vi.fn(),
-      findAll: vi.fn(),
-      findById: vi.fn(),
-      update: vi.fn(),
-      delete: vi.fn(),
-    };
-    create${PASCAL_CASE_NAME}Cmd = create${PASCAL_CASE_NAME}.inject({ ${ENTITY_NAME}Repository: mock${PASCAL_CASE_NAME}Repository });
-  });
-
-  it('should create a ${ENTITY_NAME} with valid input', async () => {
-    const input = { 
-      name: 'Test ${PASCAL_CASE_NAME}',
-      description: 'Test description'
-    };
-    const expected = { 
-      id: '123', 
-      ...input, 
-      createdAt: new Date(), 
-      updatedAt: new Date() 
-    };
-    vi.mocked(mock${PASCAL_CASE_NAME}Repository.create).mockResolvedValue(ok(expected));
-
-    const result = await create${PASCAL_CASE_NAME}Cmd()(input);
-
-    expect(result.success).toBe(true);
-    if (result.success) {
-      expect(result.data).toEqual(expected);
-    }
-    expect(mock${PASCAL_CASE_NAME}Repository.create).toHaveBeenCalledWith(input);
-  });
-
-  it('should validate empty name', async () => {
-    const result = await create${PASCAL_CASE_NAME}Cmd()({ 
-      name: '', 
-      description: 'Valid description' 
-    });
-
-    expect(isErr(result)).toBe(true);
-    if (isErr(result)) {
-      expect(result.error.message).toBe('Name is required');
-    }
-    expect(mock${PASCAL_CASE_NAME}Repository.create).not.toHaveBeenCalled();
-  });
-
-  it('should validate name length', async () => {
-    const result = await create${PASCAL_CASE_NAME}Cmd()({ 
-      name: 'a'.repeat(101),
-      description: 'Valid description'
-    });
-
-    expect(isErr(result)).toBe(true);
-    if (isErr(result)) {
-      expect(result.error.message).toBe('Name must be less than 100 characters');
-    }
-    expect(mock${PASCAL_CASE_NAME}Repository.create).not.toHaveBeenCalled();
-  });
-
-  it('should validate empty description', async () => {
-    const result = await create${PASCAL_CASE_NAME}Cmd()({ 
-      name: 'Valid name',
-      description: ''
-    });
-
-    expect(isErr(result)).toBe(true);
-    if (isErr(result)) {
-      expect(result.error.message).toBe('Description is required');
-    }
-    expect(mock${PASCAL_CASE_NAME}Repository.create).not.toHaveBeenCalled();
-  });
-
-  it('should validate description length', async () => {
-    const result = await create${PASCAL_CASE_NAME}Cmd()({ 
-      name: 'Valid name',
-      description: 'a'.repeat(501)
-    });
-
-    expect(isErr(result)).toBe(true);
-    if (isErr(result)) {
-      expect(result.error.message).toBe('Description must be less than 500 characters');
-    }
-    expect(mock${PASCAL_CASE_NAME}Repository.create).not.toHaveBeenCalled();
-  });
-});
-EOF
-
-# Create command - update
-create_file "$FEATURE_DIR/commands/update-${ENTITY_NAME}.ts" "\
-import { depend } from 'velona';
-import { err } from '@fyuuki0jp/railway-result';
-import type { Result } from '@fyuuki0jp/railway-result';
-import type { ${PASCAL_CASE_NAME}Repository } from '../domain/repository';
-import type { ${PASCAL_CASE_NAME}, Update${PASCAL_CASE_NAME}Input } from '../../../entities/${ENTITY_NAME}';
-
-export const update${PASCAL_CASE_NAME} = depend(
-  { ${ENTITY_NAME}Repository: (undefined as unknown) as ${PASCAL_CASE_NAME}Repository },
-  ({ ${ENTITY_NAME}Repository }) =>
-    async (id: string, input: Update${PASCAL_CASE_NAME}Input): Promise<Result<${PASCAL_CASE_NAME}, Error>> => {
-      // Business validation
-      if (input.name !== undefined) {
-        if (input.name.trim().length === 0) {
-          return err(new Error('Name cannot be empty'));
-        }
-        if (input.name.length > 100) {
-          return err(new Error('Name must be less than 100 characters'));
-        }
-      }
-
-      if (input.description !== undefined) {
-        if (input.description.trim().length === 0) {
-          return err(new Error('Description cannot be empty'));
-        }
-        if (input.description.length > 500) {
-          return err(new Error('Description must be less than 500 characters'));
-        }
-      }
-
-      return ${ENTITY_NAME}Repository.update(id, input);
-    }
-);
-EOF
-
-# Create command - delete
-create_file "$FEATURE_DIR/commands/delete-${ENTITY_NAME}.ts" "\
-import { depend } from 'velona';
-import { err, isErr } from '@fyuuki0jp/railway-result';
-import type { Result } from '@fyuuki0jp/railway-result';
-import type { ${PASCAL_CASE_NAME}Repository } from '../domain/repository';
-
-export const delete${PASCAL_CASE_NAME} = depend(
-  { ${ENTITY_NAME}Repository: (undefined as unknown) as ${PASCAL_CASE_NAME}Repository },
-  ({ ${ENTITY_NAME}Repository }) =>
-    async (id: string): Promise<Result<void, Error>> => {
-      // Check if ${ENTITY_NAME} exists
-      const findResult = await ${ENTITY_NAME}Repository.findById(id);
-      if (isErr(findResult)) {
-        return findResult;
-      }
-
-      if (!findResult.data) {
-        return err(new Error('${PASCAL_CASE_NAME} not found'));
-      }
-
-      return ${ENTITY_NAME}Repository.delete(id);
-    }
-);
-EOF
-
-# Create query - get all
+# Create query
 create_file "$FEATURE_DIR/queries/get-${ENTITY_NAME}s.ts" "\
 import { depend } from 'velona';
 import type { Result } from '@fyuuki0jp/railway-result';
-import type { ${PASCAL_CASE_NAME}Repository } from '../domain/repository';
 import type { ${PASCAL_CASE_NAME} } from '../../../entities/${ENTITY_NAME}';
+import type { ${PASCAL_CASE_NAME}Repository } from '../domain/repository';
 
 export const get${PASCAL_CASE_NAME}s = depend(
-  { ${ENTITY_NAME}Repository: (undefined as unknown) as ${PASCAL_CASE_NAME}Repository },
-  ({ ${ENTITY_NAME}Repository }) =>
-    async (): Promise<Result<${PASCAL_CASE_NAME}[], Error>> => {
-      return ${ENTITY_NAME}Repository.findAll();
-    }
+  { ${ENTITY_NAME}Repository: {} as ${PASCAL_CASE_NAME}Repository },
+  ({ ${ENTITY_NAME}Repository }) => async (): Promise<Result<${PASCAL_CASE_NAME}[], Error>> => {
+    return ${ENTITY_NAME}Repository.findAll();
+  }
 );
-EOF
+"
 
-# Create query - get by id
+# Create get by ID query
 create_file "$FEATURE_DIR/queries/get-${ENTITY_NAME}-by-id.ts" "\
 import { depend } from 'velona';
-import { err, isErr } from '@fyuuki0jp/railway-result';
+import { err } from '@fyuuki0jp/railway-result';
 import type { Result } from '@fyuuki0jp/railway-result';
+import { type ${PASCAL_CASE_NAME}, ${PASCAL_CASE_NAME}IdSchema } from '../../../entities/${ENTITY_NAME}';
 import type { ${PASCAL_CASE_NAME}Repository } from '../domain/repository';
-import type { ${PASCAL_CASE_NAME} } from '../../../entities/${ENTITY_NAME}';
 
 export const get${PASCAL_CASE_NAME}ById = depend(
-  { ${ENTITY_NAME}Repository: (undefined as unknown) as ${PASCAL_CASE_NAME}Repository },
+  { ${ENTITY_NAME}Repository: {} as ${PASCAL_CASE_NAME}Repository },
   ({ ${ENTITY_NAME}Repository }) =>
-    async (id: string): Promise<Result<${PASCAL_CASE_NAME}, Error>> => {
-      const result = await ${ENTITY_NAME}Repository.findById(id);
-      
-      if (isErr(result)) {
-        return result;
+    async (id: unknown): Promise<Result<${PASCAL_CASE_NAME} | null, Error>> => {
+      // Validate ID format
+      const idValidation = ${PASCAL_CASE_NAME}IdSchema.safeParse(id);
+      if (!idValidation.success) {
+        return err(new Error('Invalid ${ENTITY_NAME} ID format'));
       }
 
-      if (!result.data) {
-        return err(new Error('${PASCAL_CASE_NAME} not found'));
-      }
-
-      return result;
+      return ${ENTITY_NAME}Repository.findById(idValidation.data);
     }
 );
-EOF
-
-# Create query test
-create_file "$FEATURE_DIR/queries/get-${ENTITY_NAME}s.spec.ts" "\
-import { describe, it, expect, beforeEach, vi } from 'vitest';
-import { get${PASCAL_CASE_NAME}s } from './get-${ENTITY_NAME}s';
-import { ok, err } from '@fyuuki0jp/railway-result';
-import type { ${PASCAL_CASE_NAME}Repository } from '../domain/repository';
-
-describe('get${PASCAL_CASE_NAME}s', () => {
-  let mock${PASCAL_CASE_NAME}Repository: ${PASCAL_CASE_NAME}Repository;
-  let get${PASCAL_CASE_NAME}sQuery: ReturnType<typeof get${PASCAL_CASE_NAME}s.inject>;
-
-  beforeEach(() => {
-    mock${PASCAL_CASE_NAME}Repository = {
-      create: vi.fn(),
-      findAll: vi.fn(),
-      findById: vi.fn(),
-      update: vi.fn(),
-      delete: vi.fn(),
-    };
-    get${PASCAL_CASE_NAME}sQuery = get${PASCAL_CASE_NAME}s.inject({ ${ENTITY_NAME}Repository: mock${PASCAL_CASE_NAME}Repository });
-  });
-
-  it('should return all ${ENTITY_NAME}s', async () => {
-    const expected = [
-      { 
-        id: '1', 
-        name: 'Test 1', 
-        description: 'Desc 1',
-        createdAt: new Date(), 
-        updatedAt: new Date() 
-      },
-      { 
-        id: '2', 
-        name: 'Test 2', 
-        description: 'Desc 2',
-        createdAt: new Date(), 
-        updatedAt: new Date() 
-      },
-    ];
-    vi.mocked(mock${PASCAL_CASE_NAME}Repository.findAll).mockResolvedValue(ok(expected));
-
-    const result = await get${PASCAL_CASE_NAME}sQuery()();
-
-    expect(result.success).toBe(true);
-    if (result.success) {
-      expect(result.data).toEqual(expected);
-    }
-  });
-
-  it('should propagate repository errors', async () => {
-    vi.mocked(mock${PASCAL_CASE_NAME}Repository.findAll).mockResolvedValue(err(new Error('Database error')));
-
-    const result = await get${PASCAL_CASE_NAME}sQuery()();
-
-    expect(result.success).toBe(false);
-    if (!result.success) {
-      expect(result.error.message).toBe('Database error');
-    }
-  });
-});
-EOF
+"
 
 # Create API routes
 create_file "$FEATURE_DIR/api/routes.ts" "\
 import { Hono } from 'hono';
 import { isErr } from '@fyuuki0jp/railway-result';
 import { create${PASCAL_CASE_NAME} } from '../commands/create-${ENTITY_NAME}';
-import { update${PASCAL_CASE_NAME} } from '../commands/update-${ENTITY_NAME}';
-import { delete${PASCAL_CASE_NAME} } from '../commands/delete-${ENTITY_NAME}';
 import { get${PASCAL_CASE_NAME}s } from '../queries/get-${ENTITY_NAME}s';
 import { get${PASCAL_CASE_NAME}ById } from '../queries/get-${ENTITY_NAME}-by-id';
 import { ${ENTITY_NAME}RepositoryImpl } from '../domain/${ENTITY_NAME}-repository-impl';
@@ -672,18 +307,23 @@ import type { DbAdapter } from '../../../shared/adapters/db';
 export default (db: DbAdapter) => {
   return new Hono()
     .get('/', async (c) => {
+      // Dependency injection
       const ${ENTITY_NAME}Repository = ${ENTITY_NAME}RepositoryImpl.inject({ db })();
       const get${PASCAL_CASE_NAME}sUseCase = get${PASCAL_CASE_NAME}s.inject({ ${ENTITY_NAME}Repository })();
-      
+
+      // Execute use case
       const result = await get${PASCAL_CASE_NAME}sUseCase();
 
+      // Handle errors with appropriate status codes
       if (isErr(result)) {
         return c.json({ error: result.error.message }, 500);
       }
 
+      // Return success response
       return c.json({ ${ENTITY_NAME}s: result.data });
     })
     .post('/', async (c) => {
+      // Parse request body with error handling
       let body;
       try {
         body = await c.req.json();
@@ -691,69 +331,51 @@ export default (db: DbAdapter) => {
         return c.json({ error: 'Invalid JSON' }, 400);
       }
 
+      // Dependency injection
       const ${ENTITY_NAME}Repository = ${ENTITY_NAME}RepositoryImpl.inject({ db })();
       const create${PASCAL_CASE_NAME}UseCase = create${PASCAL_CASE_NAME}.inject({ ${ENTITY_NAME}Repository })();
 
+      // Execute use case
       const result = await create${PASCAL_CASE_NAME}UseCase(body);
 
+      // Handle errors with appropriate status codes
       if (isErr(result)) {
         const statusCode = determineStatusCode(result.error.message);
         return c.json({ error: result.error.message }, statusCode);
       }
 
+      // Return 201 Created for successful creation
       return c.json({ ${ENTITY_NAME}: result.data }, 201);
     })
     .get('/:id', async (c) => {
       const id = c.req.param('id');
+
+      // Dependency injection
       const ${ENTITY_NAME}Repository = ${ENTITY_NAME}RepositoryImpl.inject({ db })();
       const get${PASCAL_CASE_NAME}ByIdUseCase = get${PASCAL_CASE_NAME}ById.inject({ ${ENTITY_NAME}Repository })();
-      
+
+      // Execute use case
       const result = await get${PASCAL_CASE_NAME}ByIdUseCase(id);
 
+      // Handle errors with appropriate status codes
       if (isErr(result)) {
-        const statusCode = result.error.message.includes('not found') ? 404 : 500;
-        return c.json({ error: result.error.message }, statusCode);
+        if (result.error.message.includes('Invalid ${ENTITY_NAME} ID format')) {
+          return c.json({ error: result.error.message }, 400);
+        }
+        return c.json({ error: result.error.message }, 500);
       }
 
+      // Handle not found
+      if (result.data === null) {
+        return c.json({ error: '${PASCAL_CASE_NAME} not found' }, 404);
+      }
+
+      // Return success response
       return c.json({ ${ENTITY_NAME}: result.data });
-    })
-    .put('/:id', async (c) => {
-      const id = c.req.param('id');
-      let body;
-      try {
-        body = await c.req.json();
-      } catch {
-        return c.json({ error: 'Invalid JSON' }, 400);
-      }
-
-      const ${ENTITY_NAME}Repository = ${ENTITY_NAME}RepositoryImpl.inject({ db })();
-      const update${PASCAL_CASE_NAME}UseCase = update${PASCAL_CASE_NAME}.inject({ ${ENTITY_NAME}Repository })();
-      
-      const result = await update${PASCAL_CASE_NAME}UseCase(id, body);
-
-      if (isErr(result)) {
-        const statusCode = determineStatusCode(result.error.message);
-        return c.json({ error: result.error.message }, statusCode);
-      }
-
-      return c.json({ ${ENTITY_NAME}: result.data });
-    })
-    .delete('/:id', async (c) => {
-      const id = c.req.param('id');
-      const ${ENTITY_NAME}Repository = ${ENTITY_NAME}RepositoryImpl.inject({ db })();
-      const delete${PASCAL_CASE_NAME}UseCase = delete${PASCAL_CASE_NAME}.inject({ ${ENTITY_NAME}Repository })();
-      
-      const result = await delete${PASCAL_CASE_NAME}UseCase(id);
-
-      if (isErr(result)) {
-        const statusCode = result.error.message.includes('not found') ? 404 : 500;
-        return c.json({ error: result.error.message }, statusCode);
-      }
-
-      return c.json({ message: '${PASCAL_CASE_NAME} deleted successfully' });
     });
 };
 
+// Helper function to determine status code based on error message
 function determineStatusCode(errorMessage: string): number {
   if (
     errorMessage.includes('Database') ||
@@ -762,97 +384,334 @@ function determineStatusCode(errorMessage: string): number {
   ) {
     return 500;
   }
-  if (errorMessage.includes('not found')) {
-    return 404;
-  }
   return 400;
 }
-EOF
+"
+
+# Create command test
+create_file "$FEATURE_DIR/commands/create-${ENTITY_NAME}.spec.ts" "\
+import { describe, it, expect, beforeEach, vi } from 'vitest';
+import { create${PASCAL_CASE_NAME} } from './create-${ENTITY_NAME}';
+import { isErr, ok, err } from '@fyuuki0jp/railway-result';
+import type { ${PASCAL_CASE_NAME}Repository } from '../domain/repository';
+import type { ${PASCAL_CASE_NAME} } from '../../../entities/${ENTITY_NAME}';
+
+describe('create${PASCAL_CASE_NAME} command', () => {
+  let mock${PASCAL_CASE_NAME}Repo: ${PASCAL_CASE_NAME}Repository;
+  let create${PASCAL_CASE_NAME}Cmd: ReturnType<typeof create${PASCAL_CASE_NAME}.inject>;
+
+  beforeEach(() => {
+    mock${PASCAL_CASE_NAME}Repo = {
+      create: vi.fn(),
+      findAll: vi.fn(),
+      findById: vi.fn(),
+    };
+    create${PASCAL_CASE_NAME}Cmd = create${PASCAL_CASE_NAME}.inject({ ${ENTITY_NAME}Repository: mock${PASCAL_CASE_NAME}Repo });
+  });
+
+  it('should create a ${ENTITY_NAME} with valid input', async () => {
+    const input = {
+      name: 'Test ${PASCAL_CASE_NAME}',
+      description: 'A test ${ENTITY_NAME}',
+    };
+    const created${PASCAL_CASE_NAME}: ${PASCAL_CASE_NAME} = {
+      id: '550e8400-e29b-41d4-a716-446655440001' as ${PASCAL_CASE_NAME}['id'],
+      name: input.name as ${PASCAL_CASE_NAME}['name'],
+      description: input.description as ${PASCAL_CASE_NAME}['description'],
+      createdAt: new Date(),
+      updatedAt: new Date(),
+      deletedAt: null,
+    };
+
+    vi.mocked(mock${PASCAL_CASE_NAME}Repo.create).mockResolvedValue(ok(created${PASCAL_CASE_NAME}));
+
+    const result = await create${PASCAL_CASE_NAME}Cmd()(input);
+
+    expect(result.success).toBe(true);
+    if (result.success) {
+      expect(result.data).toEqual(created${PASCAL_CASE_NAME});
+    }
+    expect(mock${PASCAL_CASE_NAME}Repo.create).toHaveBeenCalledWith(input);
+  });
+
+  it('should validate name is required', async () => {
+    const input = {
+      name: '',
+      description: 'A test ${ENTITY_NAME}',
+    };
+
+    const result = await create${PASCAL_CASE_NAME}Cmd()(input);
+
+    expect(isErr(result)).toBe(true);
+    if (isErr(result)) {
+      expect(result.error.message).toContain('Name is required');
+    }
+    expect(mock${PASCAL_CASE_NAME}Repo.create).not.toHaveBeenCalled();
+  });
+
+  it('should validate name length', async () => {
+    const input = {
+      name: 'a'.repeat(101), // 101 characters
+      description: 'A test ${ENTITY_NAME}',
+    };
+
+    const result = await create${PASCAL_CASE_NAME}Cmd()(input);
+
+    expect(isErr(result)).toBe(true);
+    if (isErr(result)) {
+      expect(result.error.message).toContain('100 characters or less');
+    }
+    expect(mock${PASCAL_CASE_NAME}Repo.create).not.toHaveBeenCalled();
+  });
+
+  it('should validate description length', async () => {
+    const input = {
+      name: 'Test ${PASCAL_CASE_NAME}',
+      description: 'a'.repeat(501), // 501 characters
+    };
+
+    const result = await create${PASCAL_CASE_NAME}Cmd()(input);
+
+    expect(isErr(result)).toBe(true);
+    if (isErr(result)) {
+      expect(result.error.message).toContain('500 characters or less');
+    }
+    expect(mock${PASCAL_CASE_NAME}Repo.create).not.toHaveBeenCalled();
+  });
+
+  it('should handle repository errors', async () => {
+    const input = {
+      name: 'Test ${PASCAL_CASE_NAME}',
+      description: 'A test ${ENTITY_NAME}',
+    };
+
+    vi.mocked(mock${PASCAL_CASE_NAME}Repo.create).mockResolvedValue(
+      err(new Error('Database error'))
+    );
+
+    const result = await create${PASCAL_CASE_NAME}Cmd()(input);
+
+    expect(isErr(result)).toBe(true);
+    if (isErr(result)) {
+      expect(result.error.message).toBe('Database error');
+    }
+  });
+
+  it('should handle invalid input types', async () => {
+    const input = {
+      name: 123,
+      description: true,
+    };
+
+    const result = await create${PASCAL_CASE_NAME}Cmd()(input);
+
+    expect(isErr(result)).toBe(true);
+    if (isErr(result)) {
+      expect(result.error.message).toContain('Expected string');
+    }
+    expect(mock${PASCAL_CASE_NAME}Repo.create).not.toHaveBeenCalled();
+  });
+});
+"
+
+# Create query test
+create_file "$FEATURE_DIR/queries/get-${ENTITY_NAME}s.spec.ts" "\
+import { describe, it, expect, beforeEach, vi } from 'vitest';
+import { get${PASCAL_CASE_NAME}s } from './get-${ENTITY_NAME}s';
+import { isErr, ok, err } from '@fyuuki0jp/railway-result';
+import type { ${PASCAL_CASE_NAME}Repository } from '../domain/repository';
+
+describe('get${PASCAL_CASE_NAME}s query', () => {
+  let mock${PASCAL_CASE_NAME}Repo: ${PASCAL_CASE_NAME}Repository;
+  let get${PASCAL_CASE_NAME}sQuery: ReturnType<typeof get${PASCAL_CASE_NAME}s.inject>;
+
+  beforeEach(() => {
+    mock${PASCAL_CASE_NAME}Repo = {
+      create: vi.fn(),
+      findAll: vi.fn(),
+      findById: vi.fn(),
+    };
+    get${PASCAL_CASE_NAME}sQuery = get${PASCAL_CASE_NAME}s.inject({ ${ENTITY_NAME}Repository: mock${PASCAL_CASE_NAME}Repo });
+  });
+
+  it('should return all ${ENTITY_NAME}s', async () => {
+    const mock${PASCAL_CASE_NAME}s = [
+      {
+        id: '550e8400-e29b-41d4-a716-446655440001',
+        name: 'Test ${PASCAL_CASE_NAME} 1',
+        description: 'First test ${ENTITY_NAME}',
+        createdAt: new Date(),
+        updatedAt: new Date(),
+        deletedAt: null,
+      },
+      {
+        id: '550e8400-e29b-41d4-a716-446655440002',
+        name: 'Test ${PASCAL_CASE_NAME} 2',
+        description: 'Second test ${ENTITY_NAME}',
+        createdAt: new Date(),
+        updatedAt: new Date(),
+        deletedAt: null,
+      },
+    ];
+
+    vi.mocked(mock${PASCAL_CASE_NAME}Repo.findAll).mockResolvedValue(ok(mock${PASCAL_CASE_NAME}s));
+
+    const result = await get${PASCAL_CASE_NAME}sQuery()();
+
+    expect(result.success).toBe(true);
+    if (result.success) {
+      expect(result.data).toEqual(mock${PASCAL_CASE_NAME}s);
+      expect(result.data).toHaveLength(2);
+    }
+  });
+
+  it('should return empty array when no ${ENTITY_NAME}s exist', async () => {
+    vi.mocked(mock${PASCAL_CASE_NAME}Repo.findAll).mockResolvedValue(ok([]));
+
+    const result = await get${PASCAL_CASE_NAME}sQuery()();
+
+    expect(result.success).toBe(true);
+    if (result.success) {
+      expect(result.data).toEqual([]);
+    }
+  });
+
+  it('should handle repository errors', async () => {
+    vi.mocked(mock${PASCAL_CASE_NAME}Repo.findAll).mockResolvedValue(
+      err(new Error('Database connection failed'))
+    );
+
+    const result = await get${PASCAL_CASE_NAME}sQuery()();
+
+    expect(isErr(result)).toBe(true);
+    if (isErr(result)) {
+      expect(result.error.message).toBe('Database connection failed');
+    }
+  });
+});
+"
 
 # Create API routes test
 create_file "$FEATURE_DIR/api/routes.spec.ts" "\
-import { describe, it, expect, beforeEach } from 'vitest';
+import { describe, it, expect, beforeAll, afterAll } from 'vitest';
 import { Hono } from 'hono';
 import create${PASCAL_CASE_NAME}Routes from './routes';
-import { MockDbAdapter } from '../../../shared/adapters/db/mock';
+import { setupTestDatabase } from '../../../shared/adapters/db/pglite';
+import type { PGlite } from '@electric-sql/pglite';
+import type { DrizzleDb } from '../../../shared/adapters/db/pglite';
 
 describe('${PASCAL_CASE_NAME} API Routes', () => {
   let app: Hono;
-  let mockDb: MockDbAdapter;
+  let client: PGlite;
+  let db: DrizzleDb;
 
-  beforeEach(() => {
-    mockDb = new MockDbAdapter();
-    const ${ENTITY_NAME}Routes = create${PASCAL_CASE_NAME}Routes(mockDb);
+  beforeAll(async () => {
+    const setup = await setupTestDatabase();
+    client = setup.client;
+    db = setup.db;
+    const ${ENTITY_NAME}Routes = create${PASCAL_CASE_NAME}Routes(db);
     app = new Hono();
     app.route('/', ${ENTITY_NAME}Routes);
   });
 
-  describe('GET /', () => {
-    it('should return all ${ENTITY_NAME}s', async () => {
-      mockDb.setData('${ENTITY_NAME}s', [
-        { 
-          id: '1', 
-          name: 'Test ${PASCAL_CASE_NAME}', 
-          description: 'Test description',
-          created_at: new Date().toISOString(), 
-          updated_at: new Date().toISOString() 
-        }
-      ]);
+  afterAll(async () => {
+    await client.close();
+  });
 
+  describe('GET /', () => {
+    it('should return empty ${ENTITY_NAME}s list initially', async () => {
       const res = await app.request('/');
 
       expect(res.status).toBe(200);
       const data = await res.json();
-      expect(data.${ENTITY_NAME}s).toHaveLength(1);
-      expect(data.${ENTITY_NAME}s[0].name).toBe('Test ${PASCAL_CASE_NAME}');
+      expect(data).toEqual({ ${ENTITY_NAME}s: [] });
     });
 
-    it('should handle database errors', async () => {
-      mockDb.mockFailure('Database error');
-      
-      const res = await app.request('/');
-      
-      expect(res.status).toBe(500);
+    it('should return all ${ENTITY_NAME}s when they exist', async () => {
+      // Create isolated test instance  
+      const isolatedSetup = await setupTestDatabase();
+      const isolatedRoutes = create${PASCAL_CASE_NAME}Routes(isolatedSetup.db);
+      const testApp = new Hono();
+      testApp.route('/', isolatedRoutes);
+
+      // Create test ${ENTITY_NAME}s
+      await testApp.request('/', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ name: '${PASCAL_CASE_NAME} 1', description: 'First ${ENTITY_NAME}' }),
+      });
+
+      await testApp.request('/', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ name: '${PASCAL_CASE_NAME} 2', description: 'Second ${ENTITY_NAME}' }),
+      });
+
+      const res = await testApp.request('/');
+
+      expect(res.status).toBe(200);
       const data = await res.json();
-      expect(data.error).toBe('Database error');
+      expect(data.${ENTITY_NAME}s.length).toBeGreaterThanOrEqual(2);
+
+      // Check ${ENTITY_NAME}s are present (order might vary)
+      const names = data.${ENTITY_NAME}s.map((item: { name: string }) => item.name);
+      expect(names).toContain('${PASCAL_CASE_NAME} 1');
+      expect(names).toContain('${PASCAL_CASE_NAME} 2');
+
+      await isolatedSetup.client.close();
     });
   });
 
   describe('POST /', () => {
-    it('should create a new ${ENTITY_NAME}', async () => {
+    it('should create a new ${ENTITY_NAME} with valid data', async () => {
+      const ${ENTITY_NAME}Data = {
+        name: 'Test ${PASCAL_CASE_NAME}',
+        description: 'A test ${ENTITY_NAME}',
+      };
+
       const res = await app.request('/', {
         method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ 
-          name: 'New ${PASCAL_CASE_NAME}',
-          description: 'New description'
-        }),
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify(${ENTITY_NAME}Data),
       });
 
       expect(res.status).toBe(201);
       const data = await res.json();
-      expect(data.${ENTITY_NAME}.name).toBe('New ${PASCAL_CASE_NAME}');
+      expect(data.${ENTITY_NAME}.name).toBe('Test ${PASCAL_CASE_NAME}');
+      expect(data.${ENTITY_NAME}.description).toBe('A test ${ENTITY_NAME}');
+      expect(data.${ENTITY_NAME}.id).toBeTruthy();
+      expect(data.${ENTITY_NAME}.createdAt).toBeTruthy();
+      expect(data.${ENTITY_NAME}.updatedAt).toBeTruthy();
+      expect(data.${ENTITY_NAME}.deletedAt).toBeNull();
     });
 
-    it('should handle validation errors', async () => {
+    it('should validate name is required', async () => {
+      const ${ENTITY_NAME}Data = {
+        name: '',
+        description: 'A test ${ENTITY_NAME}',
+      };
+
       const res = await app.request('/', {
         method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ 
-          name: '',
-          description: 'Valid description'
-        }),
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify(${ENTITY_NAME}Data),
       });
 
       expect(res.status).toBe(400);
       const data = await res.json();
-      expect(data.error).toBe('Name is required');
+      expect(data.error).toContain('Name is required');
     });
 
     it('should handle invalid JSON', async () => {
       const res = await app.request('/', {
         method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
+        headers: {
+          'Content-Type': 'application/json',
+        },
         body: 'invalid json',
       });
 
@@ -864,127 +723,83 @@ describe('${PASCAL_CASE_NAME} API Routes', () => {
 
   describe('GET /:id', () => {
     it('should return ${ENTITY_NAME} by id', async () => {
-      mockDb.setData('${ENTITY_NAME}s', [
-        { 
-          id: '1', 
-          name: 'Test ${PASCAL_CASE_NAME}', 
-          description: 'Test description',
-          created_at: new Date().toISOString(), 
-          updated_at: new Date().toISOString() 
-        }
-      ]);
+      // Create isolated test instance and add test data
+      const isolatedSetup = await setupTestDatabase();
+      const isolatedRoutes = create${PASCAL_CASE_NAME}Routes(isolatedSetup.db);
+      const testApp = new Hono();
+      testApp.route('/', isolatedRoutes);
 
-      const res = await app.request('/1');
+      // Create a test ${ENTITY_NAME}
+      const createRes = await testApp.request('/', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ name: 'Test ${PASCAL_CASE_NAME}', description: 'A test ${ENTITY_NAME}' }),
+      });
+      const createData = await createRes.json();
+      const ${ENTITY_NAME}Id = createData.${ENTITY_NAME}.id;
+
+      const res = await testApp.request(\`/\${${ENTITY_NAME}Id}\`);
 
       expect(res.status).toBe(200);
       const data = await res.json();
-      expect(data.${ENTITY_NAME}.id).toBe('1');
+      expect(data.${ENTITY_NAME}.id).toBe(${ENTITY_NAME}Id);
+      expect(data.${ENTITY_NAME}.name).toBe('Test ${PASCAL_CASE_NAME}');
+
+      await isolatedSetup.client.close();
     });
 
-    it('should return 404 for non-existent ${ENTITY_NAME}', async () => {
-      mockDb.setData('${ENTITY_NAME}s', []);
+    it('should return 404 when ${ENTITY_NAME} not found', async () => {
+      const ${ENTITY_NAME}Id = '550e8400-e29b-41d4-a716-446655440001';
 
-      const res = await app.request('/non-existent');
+      const res = await app.request(\`/\${${ENTITY_NAME}Id}\`);
 
       expect(res.status).toBe(404);
       const data = await res.json();
       expect(data.error).toBe('${PASCAL_CASE_NAME} not found');
     });
-  });
 
-  describe('PUT /:id', () => {
-    it('should update ${ENTITY_NAME}', async () => {
-      mockDb.setData('${ENTITY_NAME}s', [
-        { 
-          id: '1', 
-          name: 'Old Name', 
-          description: 'Old description',
-          created_at: new Date().toISOString(), 
-          updated_at: new Date().toISOString() 
-        }
-      ]);
+    it('should return 400 for invalid ID format', async () => {
+      const res = await app.request('/invalid-id');
 
-      const res = await app.request('/1', {
-        method: 'PUT',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ name: 'Updated Name' }),
-      });
-
-      expect(res.status).toBe(200);
+      expect(res.status).toBe(400);
       const data = await res.json();
-      expect(data.${ENTITY_NAME}.name).toBe('Updated Name');
-    });
-
-    it('should return 404 for non-existent ${ENTITY_NAME}', async () => {
-      mockDb.setData('${ENTITY_NAME}s', []);
-
-      const res = await app.request('/non-existent', {
-        method: 'PUT',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ name: 'Updated' }),
-      });
-
-      expect(res.status).toBe(404);
-    });
-  });
-
-  describe('DELETE /:id', () => {
-    it('should delete ${ENTITY_NAME}', async () => {
-      mockDb.setData('${ENTITY_NAME}s', [
-        { 
-          id: '1', 
-          name: 'Test', 
-          description: 'Test',
-          created_at: new Date().toISOString(), 
-          updated_at: new Date().toISOString() 
-        }
-      ]);
-
-      const res = await app.request('/1', { method: 'DELETE' });
-
-      expect(res.status).toBe(200);
-      const data = await res.json();
-      expect(data.message).toBe('${PASCAL_CASE_NAME} deleted successfully');
-    });
-
-    it('should return 404 for non-existent ${ENTITY_NAME}', async () => {
-      mockDb.setData('${ENTITY_NAME}s', []);
-
-      const res = await app.request('/non-existent', { method: 'DELETE' });
-
-      expect(res.status).toBe(404);
+      expect(data.error).toContain('Invalid ${ENTITY_NAME} ID format');
     });
   });
 });
-EOF
+"
+
+# Replace placeholders in all created files
+if [ "$DRY_RUN" = false ]; then
+    find "$FEATURE_DIR" -name "*.ts" -exec sed -i "s/\${PASCAL_CASE_NAME}/${PASCAL_CASE_NAME}/g" {} \;
+    find "$FEATURE_DIR" -name "*.ts" -exec sed -i "s/\${ENTITY_NAME}/${ENTITY_NAME}/g" {} \;
+fi
 
 if [ "$DRY_RUN" = true ]; then
     echo "✅ DRY RUN completed for backend feature '${FEATURE_NAME}'"
-    echo "📁 Would create in: $FEATURE_DIR"
-    echo ""
-    echo "Would create:"
-    echo "  - Repository interface and implementation"
-    echo "  - Commands: create, update, delete"
-    echo "  - Queries: get all, get by id"
-    echo "  - API routes with full CRUD operations"
-    echo "  - Complete test suites for all components"
+    echo "📁 Would create files:"
+    echo "   - Repository interface and implementation"
+    echo "   - Commands and queries with tests"
+    echo "   - API routes with tests"
+    echo "   - All files using zod + branded types + Railway Result pattern"
 else
     echo "✅ Backend feature '${FEATURE_NAME}' created successfully!"
-    echo "📁 Created in: $FEATURE_DIR"
+    echo "📁 Created files:"
+    echo "   - $FEATURE_DIR/domain/repository.ts"
+    echo "   - $FEATURE_DIR/domain/${ENTITY_NAME}-repository-impl.ts"
+    echo "   - $FEATURE_DIR/commands/create-${ENTITY_NAME}.ts"
+    echo "   - $FEATURE_DIR/commands/create-${ENTITY_NAME}.spec.ts"
+    echo "   - $FEATURE_DIR/queries/get-${ENTITY_NAME}s.ts"
+    echo "   - $FEATURE_DIR/queries/get-${ENTITY_NAME}s.spec.ts"
+    echo "   - $FEATURE_DIR/queries/get-${ENTITY_NAME}-by-id.ts"
+    echo "   - $FEATURE_DIR/api/routes.ts"
+    echo "   - $FEATURE_DIR/api/routes.spec.ts"
 fi
+
 echo ""
 echo "Next steps:"
-echo "1. Create the database table for ${ENTITY_NAME}s:"
-echo "   CREATE TABLE ${ENTITY_NAME}s ("
-echo "     id TEXT PRIMARY KEY,"
-echo "     name TEXT NOT NULL,"
-echo "     description TEXT NOT NULL,"
-echo "     created_at TEXT NOT NULL,"
-echo "     updated_at TEXT NOT NULL"
-echo "   );"
-echo ""
-echo "2. Add the routes to backend/src/server.ts:"
+echo "1. Add the feature routes to your main server.ts:"
 echo "   import create${PASCAL_CASE_NAME}Routes from './features/${FEATURE_NAME}/api/routes';"
-echo "   app.route('/api/${ENTITY_NAME}s', create${PASCAL_CASE_NAME}Routes(db));"
-echo ""
-echo "3. Run tests: yarn workspace @spa-hono/backend test"
+echo "   app.route('/${ENTITY_NAME}s', create${PASCAL_CASE_NAME}Routes(db));"
+echo "2. Create the database table for ${ENTITY_NAME}s with id, name, description, created_at, updated_at, deleted_at columns"
+echo "3. Run tests: yarn test src/features/${FEATURE_NAME}/"

@@ -2,14 +2,12 @@ import { Hono } from 'hono';
 import { isErr } from '@fyuuki0jp/railway-result';
 import { createUser } from '../commands/create-user';
 import { getUsers } from '../queries/get-users';
-import { userRepositoryImpl } from '../domain/user-repository-impl';
-import type { DbAdapter } from '../../../shared/adapters/db';
+import type { DrizzleDb } from '../../../shared/adapters/db/pglite';
 
-export default (db: DbAdapter) => {
+export default (db: DrizzleDb) => {
   return new Hono()
     .get('/', async (c) => {
-      const userRepository = userRepositoryImpl.inject({ db })();
-      const getUsersUseCase = getUsers.inject({ userRepository })();
+      const getUsersUseCase = getUsers.inject({ db })();
       const result = await getUsersUseCase();
 
       if (isErr(result)) {
@@ -19,8 +17,7 @@ export default (db: DbAdapter) => {
       return c.json({ users: result.data });
     })
     .post('/', async (c) => {
-      const userRepository = userRepositoryImpl.inject({ db })();
-      const createUserUseCase = createUser.inject({ userRepository })();
+      const createUserUseCase = createUser.inject({ db })();
 
       let body;
       try {
@@ -36,7 +33,8 @@ export default (db: DbAdapter) => {
         const statusCode =
           result.error.message.includes('Database') ||
           result.error.message.includes('UNIQUE constraint') ||
-          result.error.message.includes('Execute failed')
+          result.error.message.includes('Execute failed') ||
+          result.error.message.includes('Email already exists')
             ? 500
             : 400;
 

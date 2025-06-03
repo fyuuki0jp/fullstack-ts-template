@@ -1,6 +1,8 @@
 import { FC, FormEvent, useState } from 'react';
 import { Button, Input } from '@/shared/ui';
 import { useCreateUser } from '../api';
+import { validateCreateUserInputWithErrors } from '@/shared/types/user';
+import type { CreateUserInput } from '@/shared/types/user';
 
 interface UserFormProps {
   onSuccess?: () => void;
@@ -13,64 +15,77 @@ export const UserForm: FC<UserFormProps> = ({ onSuccess }) => {
   const [nameError, setNameError] = useState('');
   const { mutate: createUser, isPending, error } = useCreateUser();
 
-  const validateEmail = (value: string) => {
-    if (!value) {
-      return 'Email is required';
+  const validateForm = (): CreateUserInput | null => {
+    const validation = validateCreateUserInputWithErrors({ email, name });
+    if (validation.success) {
+      setEmailError('');
+      setNameError('');
+      return validation.data;
     }
-    if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(value)) {
-      return 'Please enter a valid email address';
-    }
-    return '';
-  };
 
-  const validateName = (value: string) => {
-    if (!value) {
-      return 'Name is required';
-    }
-    if (value.length < 2) {
-      return 'Name must be at least 2 characters long';
-    }
-    return '';
+    setEmailError(validation.errors?.email || '');
+    setNameError(validation.errors?.name || '');
+    return null;
   };
 
   const handleEmailChange = (value: string) => {
     setEmail(value);
-    setEmailError(validateEmail(value));
+
+    // Validate email in real-time only if user has typed something
+    if (value.trim()) {
+      const validation = validateCreateUserInputWithErrors({
+        email: value,
+        name: 'ValidName',
+      });
+      if (!validation.success && validation.errors?.email) {
+        setEmailError(validation.errors.email);
+      } else {
+        setEmailError('');
+      }
+    } else {
+      setEmailError('');
+    }
   };
 
   const handleNameChange = (value: string) => {
     setName(value);
-    setNameError(validateName(value));
+
+    // Validate name in real-time only if user has typed something
+    if (value.trim()) {
+      const validation = validateCreateUserInputWithErrors({
+        email: 'valid@example.com',
+        name: value,
+      });
+      if (!validation.success && validation.errors?.name) {
+        setNameError(validation.errors.name);
+      } else {
+        setNameError('');
+      }
+    } else {
+      setNameError('');
+    }
   };
 
-  const isFormValid = email && name && !emailError && !nameError;
+  const isFormValid = email.trim() && name.trim() && !emailError && !nameError;
 
   const handleSubmit = (e: FormEvent) => {
     e.preventDefault();
 
-    // Validate on submit
-    const emailValidation = validateEmail(email);
-    const nameValidation = validateName(name);
-
-    setEmailError(emailValidation);
-    setNameError(nameValidation);
-
-    if (emailValidation || nameValidation) {
+    // Validate form with zod
+    const validatedInput = validateForm();
+    if (!validatedInput) {
       return;
     }
 
-    createUser(
-      { email, name },
-      {
-        onSuccess: () => {
-          setEmail('');
-          setName('');
-          setEmailError('');
-          setNameError('');
-          onSuccess?.();
-        },
-      }
-    );
+    createUser(validatedInput, {
+      onSuccess: () => {
+        setEmail('');
+        setName('');
+        setEmailError('');
+        setNameError('');
+        onSuccess?.();
+      },
+    });
   };
 
   return (

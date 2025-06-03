@@ -1,10 +1,6 @@
 import { useMutation, useQueryClient } from '@tanstack/react-query';
 import { apiClient } from '@/shared/lib';
-
-export interface CreateUserInput {
-  email: string;
-  name: string;
-}
+import { type CreateUserInput, validateUser } from '@/shared/types/user';
 
 export const useCreateUser = () => {
   const queryClient = useQueryClient();
@@ -25,7 +21,12 @@ export const useCreateUser = () => {
 
       const data = await response.json();
       if ('user' in data) {
-        return data;
+        // Validate the response user data with zod
+        const validatedUser = validateUser(data.user);
+        if (!validatedUser) {
+          throw new Error('Invalid user data received from server');
+        }
+        return { user: validatedUser };
       }
       throw new Error('Invalid response format');
     },
