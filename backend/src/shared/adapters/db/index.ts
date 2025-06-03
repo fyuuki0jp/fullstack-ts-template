@@ -8,6 +8,4 @@ export interface DbAdapter {
   ): Promise<Result<T, Error>>;
 }
 
-export { MemoryAdapter } from './memory';
-export { SqliteAdapter } from './sqlite';
 export { MockDbAdapter } from './mock';
