@@ -1,0 +1,13 @@
+{
+  "version": "7",
+  "dialect": "postgresql",
+  "entries": [
+    {
+      "idx": 0,
+      "version": "7",
+      "when": 1748917348400,
+      "tag": "0000_calm_amazoness",
+      "breakpoints": true
+    }
+  ]
+}

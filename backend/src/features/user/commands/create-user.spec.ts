@@ -1,20 +1,24 @@
-import { describe, it, expect, beforeEach, vi } from 'vitest';
+import { describe, it, expect, beforeAll, afterAll } from 'vitest';
 import { createUser } from './create-user';
-import { isErr, ok, err } from '@fyuuki0jp/railway-result';
-import type { UserRepository } from '../domain/repository';
-import type { User } from '../../../entities';
+import { isErr } from '@fyuuki0jp/railway-result';
+import { setupTestDatabase } from '../../../shared/adapters/db/pglite';
+import type { PGlite } from '@electric-sql/pglite';
+import type { DrizzleDb } from '../../../shared/adapters/db/pglite';
 
 describe('createUser command', () => {
-  let mockUserRepo: UserRepository;
+  let client: PGlite;
+  let db: DrizzleDb;
   let createUserCmd: ReturnType<typeof createUser.inject>;
 
-  beforeEach(() => {
-    mockUserRepo = {
-      create: vi.fn(),
-      findAll: vi.fn(),
-      findById: vi.fn(),
-    };
-    createUserCmd = createUser.inject({ userRepository: mockUserRepo });
+  beforeAll(async () => {
+    const setup = await setupTestDatabase();
+    client = setup.client;
+    db = setup.db;
+    createUserCmd = createUser.inject({ db });
+  });
+
+  afterAll(async () => {
+    await client.close();
   });
 
   it('should create a user with valid input', async () => {
@@ -22,24 +26,18 @@ describe('createUser command', () => {
       email: 'test@example.com',
       name: 'Test User',
     };
-    const createdUser: User = {
-      id: '550e8400-e29b-41d4-a716-446655440001' as User['id'],
-      email: input.email as User['email'],
-      name: input.name as User['name'],
-      createdAt: new Date(),
-      updatedAt: new Date(),
-      deletedAt: null,
-    };
-
-    vi.mocked(mockUserRepo.create).mockResolvedValue(ok(createdUser));
 
     const result = await createUserCmd()(input);
 
     expect(result.success).toBe(true);
     if (result.success) {
-      expect(result.data).toEqual(createdUser);
+      expect(result.data.email).toBe(input.email);
+      expect(result.data.name).toBe(input.name);
+      expect(result.data.id).toBeDefined();
+      expect(result.data.createdAt).toBeInstanceOf(Date);
+      expect(result.data.updatedAt).toBeInstanceOf(Date);
+      expect(result.data.deletedAt).toBeNull();
     }
-    expect(mockUserRepo.create).toHaveBeenCalledWith(input);
   });
 
   it('should validate email format', async () => {
@@ -54,7 +52,6 @@ describe('createUser command', () => {
     if (isErr(result)) {
       expect(result.error.message).toContain('Invalid email format');
     }
-    expect(mockUserRepo.create).not.toHaveBeenCalled();
   });
 
   it('should validate empty email', async () => {
@@ -69,7 +66,6 @@ describe('createUser command', () => {
     if (isErr(result)) {
       expect(result.error.message).toContain('Email is required');
     }
-    expect(mockUserRepo.create).not.toHaveBeenCalled();
   });
 
   it('should validate email with multiple @ symbols', async () => {
@@ -84,7 +80,6 @@ describe('createUser command', () => {
     if (isErr(result)) {
       expect(result.error.message).toContain('Invalid email format');
     }
-    expect(mockUserRepo.create).not.toHaveBeenCalled();
   });
 
   it('should accept valid email formats', async () => {
@@ -96,89 +91,51 @@ describe('createUser command', () => {
     ];
 
     for (const email of validEmails) {
-      vi.mocked(mockUserRepo.create).mockResolvedValue(
-        ok({
-          id: '550e8400-e29b-41d4-a716-446655440001' as User['id'],
-          email: email as User['email'],
-          name: 'Test User' as User['name'],
-          createdAt: new Date(),
-          updatedAt: new Date(),
-          deletedAt: null,
-        })
-      );
-
       const result = await createUserCmd()({ email, name: 'Test User' });
 
       expect(result.success).toBe(true);
-      expect(mockUserRepo.create).toHaveBeenCalledWith({
-        email,
-        name: 'Test User',
-      });
+      if (result.success) {
+        expect(result.data.email).toBe(email);
+        expect(result.data.name).toBe('Test User');
+      }
     }
   });
 
-  it('should handle repository errors', async () => {
+  it('should handle duplicate email addresses', async () => {
     const input = {
-      email: 'test@example.com',
-      name: 'Test User',
+      email: 'duplicate@example.com',
+      name: 'First User',
     };
 
-    vi.mocked(mockUserRepo.create).mockResolvedValue(
-      err(new Error('Database error'))
-    );
+    // Create first user
+    const firstResult = await createUserCmd()(input);
+    expect(firstResult.success).toBe(true);
 
-    const result = await createUserCmd()(input);
+    // Try to create user with same email
+    const secondResult = await createUserCmd()({
+      email: input.email,
+      name: 'Second User',
+    });
 
-    expect(isErr(result)).toBe(true);
-    if (isErr(result)) {
-      expect(result.error.message).toBe('Database error');
-    }
-  });
-
-  it('should handle unique constraint violations', async () => {
-    const input = {
-      email: 'existing@example.com',
-      name: 'New User',
-    };
-
-    vi.mocked(mockUserRepo.create).mockResolvedValue(
-      err(new Error('UNIQUE constraint failed: users.email'))
-    );
-
-    const result = await createUserCmd()(input);
-
-    expect(isErr(result)).toBe(true);
-    if (isErr(result)) {
-      expect(result.error.message).toBe(
-        'UNIQUE constraint failed: users.email'
-      );
+    expect(isErr(secondResult)).toBe(true);
+    if (isErr(secondResult)) {
+      expect(secondResult.error.message).toContain('already exists');
     }
   });
 
   it('should trim whitespace from input', async () => {
     const input = {
-      email: '  test@example.com  ',
+      email: '  test-trim@example.com  ',
       name: '  Test User  ',
     };
-
-    const expectedUser: User = {
-      id: '550e8400-e29b-41d4-a716-446655440001' as User['id'],
-      email: 'test@example.com' as User['email'],
-      name: 'Test User' as User['name'],
-      createdAt: new Date(),
-      updatedAt: new Date(),
-      deletedAt: null,
-    };
-
-    vi.mocked(mockUserRepo.create).mockResolvedValue(ok(expectedUser));
 
     const result = await createUserCmd()(input);
 
     expect(result.success).toBe(true);
-    expect(mockUserRepo.create).toHaveBeenCalledWith({
-      email: 'test@example.com',
-      name: 'Test User',
-    });
+    if (result.success) {
+      expect(result.data.email).toBe('test-trim@example.com');
+      expect(result.data.name).toBe('Test User');
+    }
   });
 
   it('should validate empty name', async () => {
@@ -193,7 +150,6 @@ describe('createUser command', () => {
     if (isErr(result)) {
       expect(result.error.message).toContain('Name is required');
     }
-    expect(mockUserRepo.create).not.toHaveBeenCalled();
   });
 
   it('should validate name length', async () => {
@@ -210,7 +166,6 @@ describe('createUser command', () => {
         'Name must be 100 characters or less'
       );
     }
-    expect(mockUserRepo.create).not.toHaveBeenCalled();
   });
 
   it('should handle multiple validation errors', async () => {
@@ -226,7 +181,6 @@ describe('createUser command', () => {
       expect(result.error.message).toContain('Invalid email format');
       expect(result.error.message).toContain('Name is required');
     }
-    expect(mockUserRepo.create).not.toHaveBeenCalled();
   });
 
   it('should handle invalid input types', async () => {
@@ -241,6 +195,5 @@ describe('createUser command', () => {
     if (isErr(result)) {
       expect(result.error.message).toContain('Expected string');
     }
-    expect(mockUserRepo.create).not.toHaveBeenCalled();
   });
 });

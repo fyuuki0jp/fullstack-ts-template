@@ -20,11 +20,11 @@ export const UserNameSchema = z
   .max(100, 'Name must be 100 characters or less')
   .brand<'UserName'>();
 
-// Frontend User type with ISO string dates
+// Frontend User type with ISO string dates (matching backend's exact field names)
 export type User = {
-  id: UserId;
-  email: Email;
-  name: UserName;
+  id: string;
+  email: string;
+  name: string;
   createdAt: string;
   updatedAt: string;
   deletedAt: string | null;
@@ -32,24 +32,32 @@ export type User = {
 
 // Frontend input type for user creation
 export type CreateUserInput = {
-  email: Email;
-  name: UserName;
+  email: string;
+  name: string;
 };
 
 // Frontend User schema for validation (dates as ISO strings)
 const _FrontendUserSchema = z.object({
-  id: UserIdSchema,
-  email: EmailSchema,
-  name: UserNameSchema,
+  id: z.string().uuid(),
+  email: z.string(),
+  name: z.string(),
   createdAt: z.string().datetime(),
   updatedAt: z.string().datetime(),
   deletedAt: z.string().datetime().nullable(),
 });
 
-// Frontend input schema
+// Frontend input schema with validation
 const _CreateUserInputSchema = z.object({
-  email: EmailSchema,
-  name: UserNameSchema,
+  email: z
+    .string()
+    .trim()
+    .min(1, 'Email is required')
+    .email('Invalid email format'),
+  name: z
+    .string()
+    .trim()
+    .min(1, 'Name is required')
+    .max(100, 'Name must be 100 characters or less'),
 });
 
 // Validation helpers

@@ -1,28 +1,24 @@
 import { serve } from '@hono/node-server';
 import { Hono } from 'hono';
-import { SqliteAdapter } from './shared/adapters/db';
+import { initializeDb } from './shared/adapters/db/pglite';
+import { migrate } from 'drizzle-orm/pglite/migrator';
 import createUserRoutes from './features/user/api/routes';
 
 // Initialize database - use in-memory for testing, file-based for production
 const isTestMode =
   process.env.NODE_ENV === 'test' || process.env.DATABASE_MODE === 'memory';
-const dbPath = isTestMode ? ':memory:' : './data.db';
-const db = new SqliteAdapter(dbPath);
+const dataDir = isTestMode ? undefined : './data';
+const db = initializeDb(dataDir);
 
 console.log(
   `Database initialized: ${isTestMode ? 'in-memory (test mode)' : 'file-based (production mode)'}`
 );
 
-// Create users table
-await db.execute(`
-  CREATE TABLE IF NOT EXISTS users (
-    id TEXT PRIMARY KEY,
-    email TEXT NOT NULL UNIQUE,
-    name TEXT NOT NULL,
-    created_at TEXT NOT NULL,
-    updated_at TEXT NOT NULL
-  )
-`);
+// Apply migrations
+await migrate(db, { migrationsFolder: './drizzle' }).catch((error) => {
+  console.error('Migration failed:', error);
+  process.exit(1);
+});
 
 // Create app
 const app = new Hono();

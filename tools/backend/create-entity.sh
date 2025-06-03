@@ -27,7 +27,7 @@ fi
 PASCAL_CASE_NAME=$(echo "$ENTITY_NAME" | sed -r 's/(^|-)([a-z])/\U\2/g')
 
 # Create entity directory
-ENTITY_DIR="backend/src/entities"
+ENTITY_DIR="backend/src/entities/${ENTITY_NAME}"
 
 if [ "$DRY_RUN" = true ]; then
     echo "🔍 DRY RUN MODE - No files will be created"
@@ -37,11 +37,31 @@ else
     mkdir -p "$ENTITY_DIR"
 fi
 
+# Create schema file (Drizzle table definition)
+if [ "$DRY_RUN" = true ]; then
+    echo "Would create file: $ENTITY_DIR/schema.ts"
+else
+    cat > "$ENTITY_DIR/schema.ts" << 'EOF'
+import { pgTable, text, timestamp, uuid } from 'drizzle-orm/pg-core';
+
+export const ${ENTITY_NAME}sTable = pgTable('${ENTITY_NAME}s', {
+  id: uuid('id').primaryKey().defaultRandom(),
+  name: text('name').notNull(),
+  description: text('description'),
+  createdAt: timestamp('created_at').notNull().defaultNow(),
+  updatedAt: timestamp('updated_at').notNull().defaultNow(),
+  deletedAt: timestamp('deleted_at'),
+});
+EOF
+    # Replace placeholders
+    sed -i "s/\${ENTITY_NAME}/${ENTITY_NAME}/g" "$ENTITY_DIR/schema.ts"
+fi
+
 # Create entity file
 if [ "$DRY_RUN" = true ]; then
-    echo "Would create file: $ENTITY_DIR/${ENTITY_NAME}.ts"
+    echo "Would create file: $ENTITY_DIR/entity.ts"
 else
-    cat > "$ENTITY_DIR/${ENTITY_NAME}.ts" << 'EOF'
+    cat > "$ENTITY_DIR/entity.ts" << 'EOF'
 import { z } from 'zod';
 import { ok, err } from '@fyuuki0jp/railway-result';
 import type { Result } from '@fyuuki0jp/railway-result';
@@ -148,16 +168,16 @@ export const create${PASCAL_CASE_NAME}Id = (): Result<${PASCAL_CASE_NAME}Id, Err
 };
 EOF
     # Replace placeholders
-    sed -i "s/\${PASCAL_CASE_NAME}/${PASCAL_CASE_NAME}/g" "$ENTITY_DIR/${ENTITY_NAME}.ts"
-    sed -i "s/\${ENTITY_NAME}/${ENTITY_NAME}/g" "$ENTITY_DIR/${ENTITY_NAME}.ts"
+    sed -i "s/\${PASCAL_CASE_NAME}/${PASCAL_CASE_NAME}/g" "$ENTITY_DIR/entity.ts"
+    sed -i "s/\${ENTITY_NAME}/${ENTITY_NAME}/g" "$ENTITY_DIR/entity.ts"
 fi
 
 # Create entity test file
 if [ "$DRY_RUN" = true ]; then
-    echo "Would create file: $ENTITY_DIR/${ENTITY_NAME}.spec.ts"
+    echo "Would create file: $ENTITY_DIR/entity.spec.ts"
     echo ""
 else
-    cat > "$ENTITY_DIR/${ENTITY_NAME}.spec.ts" << 'EOF'
+    cat > "$ENTITY_DIR/entity.spec.ts" << 'EOF'
 import { describe, it, expect } from 'vitest';
 import { isErr } from '@fyuuki0jp/railway-result';
 import {
@@ -168,7 +188,7 @@ import {
   validateCreate${PASCAL_CASE_NAME}Input,
   validateUpdate${PASCAL_CASE_NAME}Input,
   create${PASCAL_CASE_NAME}Id,
-} from './${ENTITY_NAME}';
+} from './entity';
 
 describe('${PASCAL_CASE_NAME} Entity', () => {
   describe('validate${PASCAL_CASE_NAME}', () => {
@@ -293,24 +313,35 @@ describe('${PASCAL_CASE_NAME} Entity', () => {
 });
 EOF
     # Replace placeholders
-    sed -i "s/\${PASCAL_CASE_NAME}/${PASCAL_CASE_NAME}/g" "$ENTITY_DIR/${ENTITY_NAME}.spec.ts"
-    sed -i "s/\${ENTITY_NAME}/${ENTITY_NAME}/g" "$ENTITY_DIR/${ENTITY_NAME}.spec.ts"
+    sed -i "s/\${PASCAL_CASE_NAME}/${PASCAL_CASE_NAME}/g" "$ENTITY_DIR/entity.spec.ts"
+    sed -i "s/\${ENTITY_NAME}/${ENTITY_NAME}/g" "$ENTITY_DIR/entity.spec.ts"
 fi
 
-# Update entities index file to export the new entity
+# Create index file for entity
 if [ "$DRY_RUN" = true ]; then
-    if [ -f "$ENTITY_DIR/index.ts" ]; then
-        echo "Would append to file: $ENTITY_DIR/index.ts"
+    echo "Would create file: $ENTITY_DIR/index.ts"
+else
+    cat > "$ENTITY_DIR/index.ts" << EOF
+export * from './entity';
+export * from './schema';
+EOF
+fi
+
+# Update entities main index file to export the new entity
+ENTITIES_INDEX="backend/src/entities/index.ts"
+if [ "$DRY_RUN" = true ]; then
+    if [ -f "$ENTITIES_INDEX" ]; then
+        echo "Would append to file: $ENTITIES_INDEX"
         echo "Would add: export * from './${ENTITY_NAME}';"
     else
-        echo "Would create file: $ENTITY_DIR/index.ts"
+        echo "Would create file: $ENTITIES_INDEX"
     fi
     echo ""
 else
-    if [ -f "$ENTITY_DIR/index.ts" ]; then
-        echo "export * from './${ENTITY_NAME}';" >> "$ENTITY_DIR/index.ts"
+    if [ -f "$ENTITIES_INDEX" ]; then
+        echo "export * from './${ENTITY_NAME}';" >> "$ENTITIES_INDEX"
     else
-        cat > "$ENTITY_DIR/index.ts" << EOF
+        cat > "$ENTITIES_INDEX" << EOF
 export * from './types';
 export * from './${ENTITY_NAME}';
 EOF
@@ -320,16 +351,23 @@ fi
 if [ "$DRY_RUN" = true ]; then
     echo "✅ DRY RUN completed for backend entity '${PASCAL_CASE_NAME}'"
     echo "📁 Would create files:"
-    echo "   - $ENTITY_DIR/${ENTITY_NAME}.ts"
-    echo "   - $ENTITY_DIR/${ENTITY_NAME}.spec.ts"
-    echo "   - Update $ENTITY_DIR/index.ts"
+    echo "   - $ENTITY_DIR/schema.ts (Drizzle table definition)"
+    echo "   - $ENTITY_DIR/entity.ts (Entity with validation)"
+    echo "   - $ENTITY_DIR/entity.spec.ts"
+    echo "   - $ENTITY_DIR/index.ts"
+    echo "   - Update $ENTITIES_INDEX"
 else
     echo "✅ Backend entity '${PASCAL_CASE_NAME}' created successfully!"
     echo "📁 Created files:"
-    echo "   - $ENTITY_DIR/${ENTITY_NAME}.ts"
-    echo "   - $ENTITY_DIR/${ENTITY_NAME}.spec.ts"
+    echo "   - $ENTITY_DIR/schema.ts (Drizzle table definition)"
+    echo "   - $ENTITY_DIR/entity.ts (Entity with validation)"
+    echo "   - $ENTITY_DIR/entity.spec.ts"
+    echo "   - $ENTITY_DIR/index.ts"
 fi
 echo ""
 echo "Next steps:"
-echo "1. Update the entity fields in ${ENTITY_NAME}.ts according to your domain"
-echo "2. Create a feature that uses this entity: ./tools/backend/create-feature.sh ${ENTITY_NAME}"
+echo "1. Update the table schema in schema.ts according to your domain"
+echo "2. Update the entity fields and validation in entity.ts" 
+echo "3. Run 'yarn drizzle:generate' to create migration files"
+echo "4. Run 'yarn drizzle:migrate' to apply migrations"
+echo "5. Create a feature that uses this entity: ./tools/backend/create-feature.sh ${ENTITY_NAME}"

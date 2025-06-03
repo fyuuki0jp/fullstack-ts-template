@@ -1,12 +1,12 @@
 import { depend } from 'velona';
 import { isErr } from '@fyuuki0jp/railway-result';
 import type { Result } from '@fyuuki0jp/railway-result';
-import { type User, validateCreateUserInput } from '../../../entities';
-import type { UserRepository } from '../domain/repository';
+import { type User, UserEntity, validateCreateUserInput } from '../../../entities';
+import type { DrizzleDb } from '../../../shared/adapters/db/pglite';
 
 export const createUser = depend(
-  { userRepository: {} as UserRepository },
-  ({ userRepository }) =>
+  { db: {} as DrizzleDb },
+  ({ db }) =>
     async (input: unknown): Promise<Result<User, Error>> => {
       // Validate input using domain helper
       const validationResult = validateCreateUserInput(input);
@@ -16,8 +16,9 @@ export const createUser = depend(
 
       const validatedInput = validationResult.data;
 
-      // Create user
-      return userRepository.create({
+      // Create user using entity
+      const userEntity = UserEntity.inject({ db })();
+      return userEntity.create({
         email: validatedInput.email,
         name: validatedInput.name,
       });
