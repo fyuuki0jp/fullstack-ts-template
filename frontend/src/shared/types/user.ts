@@ -1,64 +1,55 @@
 import { z } from 'zod';
 
-// Frontend branded types (using frontend zod instance)
-export type UserId = z.infer<typeof UserIdSchema>;
-export const UserIdSchema = z.string().uuid().brand<'UserId'>();
+// Import backend schemas directly to avoid duplication
+import type {
+  User as BackendUser,
+  CreateUserInput as BackendCreateUserInput,
+  UpdateUserInput as BackendUpdateUserInput,
+  UserId,
+  Email,
+  UserName,
+} from '@backend/entities/user/schema';
 
-export type Email = z.infer<typeof EmailSchema>;
-export const EmailSchema = z
-  .string()
-  .trim()
-  .min(1, 'Email is required')
-  .email('Please enter a valid email address')
-  .brand<'Email'>();
+// Re-export backend branded types
+export type { UserId, Email, UserName };
 
-export type UserName = z.infer<typeof UserNameSchema>;
-export const UserNameSchema = z
-  .string()
-  .trim()
-  .min(2, 'Name must be at least 2 characters long')
-  .max(100, 'Name must be 100 characters or less')
-  .brand<'UserName'>();
-
-// Frontend User type with ISO string dates (matching backend's exact field names)
-export type User = {
-  id: string;
-  email: string;
-  name: string;
+// Frontend User type with ISO string dates (converted from backend Date objects)
+export type User = Omit<
+  BackendUser,
+  'createdAt' | 'updatedAt' | 'deletedAt'
+> & {
   createdAt: string;
   updatedAt: string;
   deletedAt: string | null;
 };
 
-// Frontend input type for user creation
-export type CreateUserInput = {
-  email: string;
-  name: string;
-};
+// Frontend input types (same as backend but re-exported for convenience)
+export type CreateUserInput = BackendCreateUserInput;
+export type UpdateUserInput = BackendUpdateUserInput;
 
-// Frontend User schema for validation (dates as ISO strings)
-const _FrontendUserSchema = z.object({
-  id: z.string().uuid(),
-  email: z.string(),
-  name: z.string(),
-  createdAt: z.string().datetime(),
-  updatedAt: z.string().datetime(),
-  deletedAt: z.string().datetime().nullable(),
-});
+// Import backend validation schemas and adapt for frontend use
+import {
+  userSelectSchema,
+  userInsertSchema,
+  userUpdateSchema,
+} from '@backend/entities/user/schema';
 
-// Frontend input schema with validation
-const _CreateUserInputSchema = z.object({
-  email: z
-    .string()
-    .trim()
-    .min(1, 'Email is required')
-    .email('Please enter a valid email address'),
-  name: z
-    .string()
-    .trim()
-    .min(2, 'Name must be at least 2 characters long')
-    .max(100, 'Name must be 100 characters or less'),
-});
+// Frontend schema with ISO string dates (for API response validation)
+const _FrontendUserSchema = userSelectSchema
+  .omit({
+    createdAt: true,
+    updatedAt: true,
+    deletedAt: true,
+  })
+  .extend({
+    createdAt: z.string().datetime(),
+    updatedAt: z.string().datetime(),
+    deletedAt: z.string().datetime().nullable(),
+  });
+
+// Re-use backend validation schemas directly for form validation
+const _CreateUserInputSchema = userInsertSchema;
+const _UpdateUserInputSchema = userUpdateSchema;
 
 // Validation helpers
 export const validateUser = (data: unknown): User | null => {
@@ -70,6 +61,13 @@ export const validateCreateUserInput = (
   data: unknown
 ): CreateUserInput | null => {
   const result = _CreateUserInputSchema.safeParse(data);
+  return result.success ? result.data : null;
+};
+
+export const validateUpdateUserInput = (
+  data: unknown
+): UpdateUserInput | null => {
+  const result = _UpdateUserInputSchema.safeParse(data);
   return result.success ? result.data : null;
 };
 

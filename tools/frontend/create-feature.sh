@@ -69,11 +69,11 @@ import type {
   ${PASCAL_CASE_NAME} as Backend${PASCAL_CASE_NAME},
   Create${PASCAL_CASE_NAME}Input as BackendCreate${PASCAL_CASE_NAME}Input,
   ${PASCAL_CASE_NAME}Id,
-} from '../../../../backend/src/entities/${ENTITY_NAME}';
+} from '@backend/entities/${ENTITY_NAME}';
 
 // Re-export backend types for convenience
 export type { ${PASCAL_CASE_NAME}Id };
-export type { Create${PASCAL_CASE_NAME}Input } from '../../../../backend/src/entities/${ENTITY_NAME}';
+export type { Create${PASCAL_CASE_NAME}Input } from '@backend/entities/${ENTITY_NAME}';
 
 // Frontend ${PASCAL_CASE_NAME} type with ISO string dates (transformed from backend Date objects)
 export type ${PASCAL_CASE_NAME} = Omit<
