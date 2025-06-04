@@ -69,11 +69,10 @@ yarn@1.22.19  # Yarn Classic使用
 
 ### Railway Result 強制
 ```javascript
-// .eslintrc
-"plugins": ["@fyuuki0jp/railway"],
-"rules": {
-  "@fyuuki0jp/railway/must-return-result": "error"
-}
+// .eslint.config.mjs
+export [
+  railway.configs.recommended
+]
 ```
 
 すべてのコマンド・クエリ・リポジトリ関数は必ず`Result<T, E>`を返すことが強制される。
