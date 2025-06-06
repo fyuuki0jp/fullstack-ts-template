@@ -1,0 +1,115 @@
+{
+  "name": "Enhanced Create User Validation Tests",
+  "feature": "user",
+  "operation": "createUser",
+  "description": "Enhanced decision table for create user command with comprehensive constraint-based test generation",
+  "inputFields": [
+    {
+      "name": "name",
+      "type": "input",
+      "description": "User's full name",
+      "dataType": "string",
+      "constraints": {
+        "minLength": 2,
+        "maxLength": 100,
+        "required": true,
+        "pattern": "^[a-zA-Z\\s'-]+$"
+      },
+      "testValues": {
+        "valid": ["John Doe", "Mary O'Connor", "Jean-François"],
+        "invalid": ["A", ""],
+        "boundary": ["AB", "a".repeat(100)]
+      }
+    },
+    {
+      "name": "email",
+      "type": "input", 
+      "description": "User's email address",
+      "dataType": "string",
+      "constraints": {
+        "minLength": 5,
+        "maxLength": 255,
+        "required": true,
+        "pattern": "^[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\\.[a-zA-Z]{2,}$"
+      },
+      "testValues": {
+        "valid": ["test@example.com", "user.name+tag@domain.co.uk"],
+        "invalid": ["invalid-email", "@domain.com", "user@"],
+        "boundary": ["a@b.co", "a".repeat(250) + "@test.com"]
+      }
+    },
+    {
+      "name": "age",
+      "type": "input",
+      "description": "User's age",
+      "dataType": "number",
+      "constraints": {
+        "min": 13,
+        "max": 120,
+        "required": false
+      },
+      "testValues": {
+        "valid": [25, 18, 65],
+        "invalid": [-1, 12, 121],
+        "boundary": [13, 120]
+      }
+    },
+    {
+      "name": "interests",
+      "type": "input",
+      "description": "List of user interests",
+      "dataType": "array",
+      "constraints": {
+        "minItems": 0,
+        "maxItems": 10,
+        "required": false
+      },
+      "testValues": {
+        "valid": [["sports", "music"], [], ["reading"]],
+        "invalid": [["a".repeat(11)]], 
+        "boundary": [Array(10).fill("interest")]
+      }
+    }
+  ],
+  "coverageOptions": {
+    "boundary": true,
+    "equivalence": true,
+    "pairwise": true,
+    "errorCombinations": true,
+    "crossField": false
+  },
+  "columns": [
+    {
+      "name": "success",
+      "type": "expected",
+      "description": "Whether the operation should succeed",
+      "dataType": "boolean"
+    },
+    {
+      "name": "errorMessage",
+      "type": "expected", 
+      "description": "Expected error message if operation fails",
+      "dataType": "string"
+    },
+    {
+      "name": "userId",
+      "type": "output",
+      "description": "Generated user ID on success",
+      "dataType": "string"
+    }
+  ],
+  "rows": [
+    {
+      "testDescription": "should create user with all valid inputs",
+      "name": "John Doe",
+      "email": "john.doe@example.com", 
+      "age": 30,
+      "interests": ["programming", "reading"],
+      "success": true,
+      "errorMessage": null,
+      "testType": "manual",
+      "priority": "high"
+    }
+  ],
+  "autoGenerate": true
+}
