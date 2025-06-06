@@ -18,10 +18,10 @@ yarn test:install # Playwright ブラウザーインストール
 
 ### 個別実行
 ```bash
-yarn workspace @spa-hono/backend dev      # バックエンドのみ
-yarn workspace @spa-hono/frontend dev     # フロントエンドのみ
-yarn workspace @spa-hono/backend test     # バックエンドテストのみ
-yarn workspace @spa-hono/frontend test    # フロントエンドテストのみ
+yarn workspace backend dev      # バックエンドのみ
+yarn workspace frontend dev     # フロントエンドのみ
+yarn workspace backend test     # バックエンドテストのみ
+yarn workspace frontend test    # フロントエンドテストのみ
 ```
 
 ## スキャフォールディングツール
@@ -68,12 +68,12 @@ yarn create:frontend:feature product-list product --dry-run
 yarn test
 
 # ウォッチモード
-yarn workspace @spa-hono/backend test:watch
-yarn workspace @spa-hono/frontend test:watch
+yarn workspace backend test:watch
+yarn workspace frontend test:watch
 
 # 特定のテストファイル
-yarn workspace @spa-hono/backend test src/features/user/
-yarn workspace @spa-hono/frontend test src/features/user-creation/
+yarn workspace backend test src/features/user/
+yarn workspace frontend test src/features/user-creation/
 ```
 
 ### テスト環境
@@ -89,16 +89,16 @@ NODE_ENV=test DATABASE_MODE=memory
 
 ```bash
 # スキーマからマイグレーション生成
-yarn workspace @spa-hono/backend drizzle:generate
+yarn workspace backend drizzle:generate
 
 # マイグレーション実行
-yarn workspace @spa-hono/backend drizzle:migrate
+yarn workspace backend drizzle:migrate
 
 # データベーススキーマを直接プッシュ（開発用）
-yarn workspace @spa-hono/backend drizzle:push
+yarn workspace backend drizzle:push
 
 # Drizzle Studio（データベースGUI）
-yarn workspace @spa-hono/backend drizzle:studio
+yarn workspace backend drizzle:studio
 ```
 
 ## 開発サーバー
@@ -113,7 +113,7 @@ yarn dev
 ### ネットワーク公開
 ```bash
 # フロントエンドをネットワークに公開
-yarn workspace @spa-hono/frontend dev
+yarn workspace frontend dev
 # --host フラグが自動で有効
 ```
 

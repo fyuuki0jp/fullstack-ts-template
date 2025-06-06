@@ -318,7 +318,8 @@ yarn lint && yarn typecheck && yarn build && yarn test
 
 ```bash
 # 1. 要件をTodoWriteで構造化
-TodoWrite: Add product management feature
+TodoWrite: 
+to memorize
 
 # 2. エンティティ作成
 yarn create:backend:entity product

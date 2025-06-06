@@ -64,7 +64,7 @@ describe('createUser command', () => {
 });
 
 # テスト実行 → 失敗することを確認
-yarn workspace @spa-hono/backend test src/features/user/commands/
+yarn workspace backend test src/features/user/commands/
 ```
 
 **🟢 GREEN - 最小実装**
@@ -84,7 +84,7 @@ export const createUser = depend(
 );
 
 # テスト実行 → 成功することを確認
-yarn workspace @spa-hono/backend test src/features/user/commands/
+yarn workspace backend test src/features/user/commands/
 ```
 
 **🔵 BLUE - リファクタリング**
@@ -214,13 +214,13 @@ test('complete user creation flow', async ({ page }) => {
 #### バックエンド完了時
 ```bash
 # すべてのテストが通ることを確認
-yarn workspace @spa-hono/backend test
+yarn workspace backend test
 
 # 型チェック
-yarn workspace @spa-hono/backend typecheck
+yarn workspace backend typecheck
 
 # リンター
-yarn workspace @spa-hono/backend lint
+yarn workspace backend lint
 
 # 手動API動作確認
 curl -X POST http://localhost:3000/api/users \
@@ -231,16 +231,16 @@ curl -X POST http://localhost:3000/api/users \
 #### フロントエンド完了時
 ```bash
 # すべてのテストが通ることを確認
-yarn workspace @spa-hono/frontend test
+yarn workspace frontend test
 
 # 型チェック
-yarn workspace @spa-hono/frontend typecheck
+yarn workspace frontend typecheck
 
 # リンター
-yarn workspace @spa-hono/frontend lint
+yarn workspace frontend lint
 
 # ビルドエラーがないことを確認
-yarn workspace @spa-hono/frontend build
+yarn workspace frontend build
 ```
 
 #### 統合完了時
@@ -299,8 +299,8 @@ yarn create:frontend:feature <name>
 ### 3. 自動化
 ```bash
 # ウォッチモードでリアルタイムフィードバック
-yarn workspace @spa-hono/backend test:watch
-yarn workspace @spa-hono/frontend test:watch
+yarn workspace backend test:watch
+yarn workspace frontend test:watch
 ```
 
 ### 4. IDE設定

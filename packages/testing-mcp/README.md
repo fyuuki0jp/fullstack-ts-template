@@ -1,6 +1,6 @@
 # Testing MCP Server v2.0
 
-A Model Context Protocol (MCP) server for generating comprehensive backend tests using enhanced decision tables with automatic test case generation. This tool helps automate test generation for the spa-hono monorepo by allowing you to define test scenarios with constraints and automatically generating comprehensive test coverage.
+A Model Context Protocol (MCP) server for generating comprehensive backend tests using enhanced decision tables with automatic test case generation. This tool helps automate test generation for the fullstack-ts-template monorepo by allowing you to define test scenarios with constraints and automatically generating comprehensive test coverage.
 
 ## ✨ New Features (v2.0)
 
@@ -25,10 +25,10 @@ A Model Context Protocol (MCP) server for generating comprehensive backend tests
 
 ```bash
 # Install dependencies
-yarn workspace @spa-hono/testing-mcp install
+yarn workspace testing-mcp install
 
 # Build the MCP server
-yarn workspace @spa-hono/testing-mcp build
+yarn workspace testing-mcp build
 ```
 
 ## Usage
@@ -356,19 +356,19 @@ To upgrade existing decision tables:
 
 ```bash
 # Run tests
-yarn workspace @spa-hono/testing-mcp test
+yarn workspace testing-mcp test
 
 # Run in watch mode  
-yarn workspace @spa-hono/testing-mcp test:watch
+yarn workspace testing-mcp test:watch
 
 # Type checking
-yarn workspace @spa-hono/testing-mcp typecheck
+yarn workspace testing-mcp typecheck
 
 # Linting
-yarn workspace @spa-hono/testing-mcp lint
+yarn workspace testing-mcp lint
 
 # Build
-yarn workspace @spa-hono/testing-mcp build
+yarn workspace testing-mcp build
 ```
 
 ## Changelog
