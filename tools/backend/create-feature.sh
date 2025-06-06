@@ -2,6 +2,14 @@
 
 # Backend Feature Boilerplate Generator
 # Usage: ./create-feature.sh <feature-name> [entity-name] [--dry-run]
+#
+# This script creates a generic feature template with TODO comments.
+# After running this script, you should:
+# 1. Implement the domain-specific logic according to your requirements
+# 2. Use MCP testing tools for comprehensive test coverage:
+#    - Create decision tables: mcp__testing-mcp__create_decision_table
+#    - Generate tests: mcp__testing-mcp__generate_tests
+#    - Add generated tests to replace the generic TODO test templates
 
 FEATURE_NAME=$1
 ENTITY_NAME=${2:-$1}  # Use feature name as entity name if not provided
@@ -67,15 +75,20 @@ else
     mkdir -p "$FEATURE_DIR/domain"
 fi
 
-# Check if entity exists
-ENTITY_FILE="backend/src/entities/${ENTITY_NAME}.ts"
-if [ ! -f "$ENTITY_FILE" ]; then
+# Check if entity exists (check for entity directory structure)
+ENTITY_DIR="backend/src/entities/${ENTITY_NAME}"
+ENTITY_SCHEMA_FILE="$ENTITY_DIR/schema.ts"
+ENTITY_ENTITY_FILE="$ENTITY_DIR/entity.ts"
+
+if [ ! -d "$ENTITY_DIR" ] || [ ! -f "$ENTITY_SCHEMA_FILE" ] || [ ! -f "$ENTITY_ENTITY_FILE" ]; then
     echo "⚠️  Entity '${ENTITY_NAME}' not found. Creating it first..."
     if [ "$DRY_RUN" = true ]; then
         ./tools/backend/create-entity.sh "$ENTITY_NAME" --dry-run
     else
         ./tools/backend/create-entity.sh "$ENTITY_NAME"
     fi
+else
+    echo "✅ Entity '${ENTITY_NAME}' already exists. Using existing entity..."
 fi
 
 # Create repository interface
@@ -104,125 +117,60 @@ import {
   create${PASCAL_CASE_NAME}Id,
 } from '../../../entities/${ENTITY_NAME}';
 
+// TODO: Implement repository methods according to your entity schema
 export const ${ENTITY_NAME}RepositoryImpl = depend({ db: {} as DbAdapter }, ({ db }) => ({
   async create(input: Create${PASCAL_CASE_NAME}Input): Promise<Result<${PASCAL_CASE_NAME}, Error>> {
+    // TODO: Generate ID for new entity
     const idResult = create${PASCAL_CASE_NAME}Id();
     if (isErr(idResult)) {
       return idResult;
     }
 
-    const now = new Date();
+    // TODO: Create entity data based on your schema
+    // Example:
+    // const entityData: ${PASCAL_CASE_NAME} = {
+    //   id: idResult.data,
+    //   // Add your domain fields here
+    //   createdAt: new Date(),
+    //   updatedAt: new Date(),
+    //   deletedAt: null,
+    // };
 
-    const ${ENTITY_NAME}Data: ${PASCAL_CASE_NAME} = {
-      id: idResult.data,
-      name: input.name,
-      description: input.description,
-      createdAt: now,
-      updatedAt: now,
-      deletedAt: null,
-    };
+    // TODO: Execute INSERT query with your table columns
+    // Example:
+    // const result = await db.execute(
+    //   'INSERT INTO ${ENTITY_NAME}s (id, field1, field2, created_at, updated_at) VALUES (?, ?, ?, ?, ?)',
+    //   [entityData.id, entityData.field1, entityData.field2, entityData.createdAt.toISOString(), entityData.updatedAt.toISOString()]
+    // );
 
-    const result = await db.execute(
-      \`INSERT INTO ${ENTITY_NAME}s (id, name, description, created_at, updated_at, deleted_at) 
-         VALUES (?, ?, ?, ?, ?, ?)\`,
-      [
-        ${ENTITY_NAME}Data.id,
-        ${ENTITY_NAME}Data.name,
-        ${ENTITY_NAME}Data.description || null,
-        ${ENTITY_NAME}Data.createdAt.toISOString(),
-        ${ENTITY_NAME}Data.updatedAt.toISOString(),
-        ${ENTITY_NAME}Data.deletedAt?.toISOString() || null,
-      ]
-    );
-
-    if (isErr(result)) {
-      return err(result.error);
-    }
-
-    return ok(${ENTITY_NAME}Data);
+    // TODO: Return created entity or error
+    throw new Error('TODO: Implement create method according to your entity schema');
   },
 
   async findAll(): Promise<Result<${PASCAL_CASE_NAME}[], Error>> {
-    const result = await db.query<{
-      id: string;
-      name: string;
-      description: string | null;
-      created_at: string;
-      updated_at: string;
-      deleted_at: string | null;
-    }>(
-      'SELECT id, name, description, created_at, updated_at, deleted_at FROM ${ENTITY_NAME}s WHERE deleted_at IS NULL ORDER BY created_at DESC'
-    );
+    // TODO: Execute SELECT query with your table columns
+    // Example:
+    // const result = await db.query<{
+    //   id: string;
+    //   field1: string;
+    //   field2: string | null;
+    //   created_at: string;
+    //   updated_at: string;
+    //   deleted_at: string | null;
+    // }>('SELECT id, field1, field2, created_at, updated_at, deleted_at FROM ${ENTITY_NAME}s WHERE deleted_at IS NULL');
 
-    if (isErr(result)) {
-      return err(result.error);
-    }
+    // TODO: Transform database rows to domain objects
+    // Use validate${PASCAL_CASE_NAME}() to ensure data integrity
 
-    const ${ENTITY_NAME}s: ${PASCAL_CASE_NAME}[] = [];
-    for (const row of result.data) {
-      const ${ENTITY_NAME}Result = validate${PASCAL_CASE_NAME}({
-        id: row.id,
-        name: row.name,
-        description: row.description,
-        createdAt: new Date(row.created_at),
-        updatedAt: new Date(row.updated_at),
-        deletedAt: row.deleted_at ? new Date(row.deleted_at) : null,
-      });
-
-      if (isErr(${ENTITY_NAME}Result)) {
-        return err(
-          new Error(
-            \`Invalid ${ENTITY_NAME} data from database for id: \${row.id} - \${${ENTITY_NAME}Result.error.message}\`
-          )
-        );
-      }
-
-      ${ENTITY_NAME}s.push(${ENTITY_NAME}Result.data);
-    }
-
-    return ok(${ENTITY_NAME}s);
+    throw new Error('TODO: Implement findAll method according to your entity schema');
   },
 
   async findById(id: ${PASCAL_CASE_NAME}Id): Promise<Result<${PASCAL_CASE_NAME} | null, Error>> {
-    const result = await db.query<{
-      id: string;
-      name: string;
-      description: string | null;
-      created_at: string;
-      updated_at: string;
-      deleted_at: string | null;
-    }>(
-      'SELECT id, name, description, created_at, updated_at, deleted_at FROM ${ENTITY_NAME}s WHERE id = ? AND deleted_at IS NULL',
-      [id]
-    );
+    // TODO: Execute SELECT query by ID
+    // TODO: Return null if not found, entity if found, error if database error
+    // Use validate${PASCAL_CASE_NAME}() to ensure data integrity
 
-    if (isErr(result)) {
-      return err(result.error);
-    }
-
-    if (result.data.length === 0) {
-      return ok(null);
-    }
-
-    const row = result.data[0];
-    const ${ENTITY_NAME}Result = validate${PASCAL_CASE_NAME}({
-      id: row.id,
-      name: row.name,
-      description: row.description,
-      createdAt: new Date(row.created_at),
-      updatedAt: new Date(row.updated_at),
-      deletedAt: row.deleted_at ? new Date(row.deleted_at) : null,
-    });
-
-    if (isErr(${ENTITY_NAME}Result)) {
-      return err(
-        new Error(
-          \`Invalid ${ENTITY_NAME} data from database for id: \${row.id} - \${${ENTITY_NAME}Result.error.message}\`
-        )
-      );
-    }
-
-    return ok(${ENTITY_NAME}Result.data);
+    throw new Error('TODO: Implement findById method according to your entity schema');
   },
 }));
 "
@@ -235,11 +183,12 @@ import type { Result } from '@fyuuki0jp/railway-result';
 import { type ${PASCAL_CASE_NAME}, validateCreate${PASCAL_CASE_NAME}Input } from '../../../entities/${ENTITY_NAME}';
 import type { ${PASCAL_CASE_NAME}Repository } from '../domain/repository';
 
+// TODO: Implement create command according to your domain requirements
 export const create${PASCAL_CASE_NAME} = depend(
   { ${ENTITY_NAME}Repository: {} as ${PASCAL_CASE_NAME}Repository },
   ({ ${ENTITY_NAME}Repository }) =>
     async (input: unknown): Promise<Result<${PASCAL_CASE_NAME}, Error>> => {
-      // Validate input using domain helper
+      // TODO: Validate input using domain helper
       const validationResult = validateCreate${PASCAL_CASE_NAME}Input(input);
       if (isErr(validationResult)) {
         return validationResult;
@@ -247,11 +196,11 @@ export const create${PASCAL_CASE_NAME} = depend(
 
       const validatedInput = validationResult.data;
 
-      // Create ${ENTITY_NAME}
-      return ${ENTITY_NAME}Repository.create({
-        name: validatedInput.name,
-        description: validatedInput.description,
-      });
+      // TODO: Add additional business logic validation if needed
+      // Example: Check business rules, permissions, etc.
+
+      // TODO: Create entity using repository
+      return ${ENTITY_NAME}Repository.create(validatedInput);
     }
 );
 "
@@ -263,9 +212,13 @@ import type { Result } from '@fyuuki0jp/railway-result';
 import type { ${PASCAL_CASE_NAME} } from '../../../entities/${ENTITY_NAME}';
 import type { ${PASCAL_CASE_NAME}Repository } from '../domain/repository';
 
+// TODO: Implement query to get all entities
 export const get${PASCAL_CASE_NAME}s = depend(
   { ${ENTITY_NAME}Repository: {} as ${PASCAL_CASE_NAME}Repository },
   ({ ${ENTITY_NAME}Repository }) => async (): Promise<Result<${PASCAL_CASE_NAME}[], Error>> => {
+    // TODO: Add business logic if needed (filtering, sorting, etc.)
+    // TODO: Add authorization checks if needed
+
     return ${ENTITY_NAME}Repository.findAll();
   }
 );
@@ -279,15 +232,19 @@ import type { Result } from '@fyuuki0jp/railway-result';
 import { type ${PASCAL_CASE_NAME}, ${PASCAL_CASE_NAME}IdSchema } from '../../../entities/${ENTITY_NAME}';
 import type { ${PASCAL_CASE_NAME}Repository } from '../domain/repository';
 
+// TODO: Implement query to get entity by ID
 export const get${PASCAL_CASE_NAME}ById = depend(
   { ${ENTITY_NAME}Repository: {} as ${PASCAL_CASE_NAME}Repository },
   ({ ${ENTITY_NAME}Repository }) =>
     async (id: unknown): Promise<Result<${PASCAL_CASE_NAME} | null, Error>> => {
-      // Validate ID format
+      // TODO: Validate ID format
       const idValidation = ${PASCAL_CASE_NAME}IdSchema.safeParse(id);
       if (!idValidation.success) {
         return err(new Error('Invalid ${ENTITY_NAME} ID format'));
       }
+
+      // TODO: Add authorization checks if needed
+      // TODO: Add business logic if needed
 
       return ${ENTITY_NAME}Repository.findById(idValidation.data);
     }
@@ -410,14 +367,15 @@ describe('create${PASCAL_CASE_NAME} command', () => {
   });
 
   it('should create a ${ENTITY_NAME} with valid input', async () => {
+    // TODO: Replace with your domain-specific input fields
     const input = {
-      name: 'Test ${PASCAL_CASE_NAME}',
-      description: 'A test ${ENTITY_NAME}',
+      // Example: title: 'Test ${PASCAL_CASE_NAME}',
+      // Example: description: 'A test ${ENTITY_NAME}',
     };
+    // TODO: Replace with your entity structure
     const created${PASCAL_CASE_NAME}: ${PASCAL_CASE_NAME} = {
       id: '550e8400-e29b-41d4-a716-446655440001' as ${PASCAL_CASE_NAME}['id'],
-      name: input.name as ${PASCAL_CASE_NAME}['name'],
-      description: input.description as ${PASCAL_CASE_NAME}['description'],
+      // TODO: Add your domain fields here
       createdAt: new Date(),
       updatedAt: new Date(),
       deletedAt: null,
@@ -434,55 +392,58 @@ describe('create${PASCAL_CASE_NAME} command', () => {
     expect(mock${PASCAL_CASE_NAME}Repo.create).toHaveBeenCalledWith(input);
   });
 
-  it('should validate name is required', async () => {
+  // TODO: Add validation tests based on your domain schema
+  it('should validate required fields', async () => {
     const input = {
-      name: '',
-      description: 'A test ${ENTITY_NAME}',
+      // TODO: Add invalid field values according to your schema
     };
 
     const result = await create${PASCAL_CASE_NAME}Cmd()(input);
 
     expect(isErr(result)).toBe(true);
     if (isErr(result)) {
-      expect(result.error.message).toContain('Name is required');
+      // TODO: Update error message to match your validation
+      expect(result.error.message).toContain('validation failed');
     }
     expect(mock${PASCAL_CASE_NAME}Repo.create).not.toHaveBeenCalled();
   });
 
-  it('should validate name length', async () => {
+  // TODO: Add specific field validation tests
+  it('should validate field constraints', async () => {
     const input = {
-      name: 'a'.repeat(101), // 101 characters
-      description: 'A test ${ENTITY_NAME}',
+      // TODO: Add input that violates field constraints
     };
 
     const result = await create${PASCAL_CASE_NAME}Cmd()(input);
 
     expect(isErr(result)).toBe(true);
     if (isErr(result)) {
-      expect(result.error.message).toContain('100 characters or less');
+      // TODO: Update error message to match your validation
+      expect(result.error.message).toContain('validation failed');
     }
     expect(mock${PASCAL_CASE_NAME}Repo.create).not.toHaveBeenCalled();
   });
 
-  it('should validate description length', async () => {
+  // TODO: Add additional validation tests for your domain
+  it('should validate optional field constraints', async () => {
     const input = {
-      name: 'Test ${PASCAL_CASE_NAME}',
-      description: 'a'.repeat(501), // 501 characters
+      // TODO: Add input that violates optional field constraints
     };
 
     const result = await create${PASCAL_CASE_NAME}Cmd()(input);
 
     expect(isErr(result)).toBe(true);
     if (isErr(result)) {
-      expect(result.error.message).toContain('500 characters or less');
+      // TODO: Update error message to match your validation
+      expect(result.error.message).toContain('validation failed');
     }
     expect(mock${PASCAL_CASE_NAME}Repo.create).not.toHaveBeenCalled();
   });
 
   it('should handle repository errors', async () => {
+    // TODO: Use valid input according to your schema
     const input = {
-      name: 'Test ${PASCAL_CASE_NAME}',
-      description: 'A test ${ENTITY_NAME}',
+      // TODO: Add valid field values
     };
 
     vi.mocked(mock${PASCAL_CASE_NAME}Repo.create).mockResolvedValue(
@@ -498,16 +459,17 @@ describe('create${PASCAL_CASE_NAME} command', () => {
   });
 
   it('should handle invalid input types', async () => {
+    // TODO: Add input with wrong types according to your schema
     const input = {
-      name: 123,
-      description: true,
+      // TODO: Add fields with wrong types (e.g., number instead of string)
     };
 
     const result = await create${PASCAL_CASE_NAME}Cmd()(input);
 
     expect(isErr(result)).toBe(true);
     if (isErr(result)) {
-      expect(result.error.message).toContain('Expected string');
+      // TODO: Update error message to match your validation
+      expect(result.error.message).toContain('Expected');
     }
     expect(mock${PASCAL_CASE_NAME}Repo.create).not.toHaveBeenCalled();
   });
@@ -535,19 +497,18 @@ describe('get${PASCAL_CASE_NAME}s query', () => {
   });
 
   it('should return all ${ENTITY_NAME}s', async () => {
+    // TODO: Create mock entities according to your schema
     const mock${PASCAL_CASE_NAME}s = [
       {
         id: '550e8400-e29b-41d4-a716-446655440001',
-        name: 'Test ${PASCAL_CASE_NAME} 1',
-        description: 'First test ${ENTITY_NAME}',
+        // TODO: Add your domain fields here
         createdAt: new Date(),
         updatedAt: new Date(),
         deletedAt: null,
       },
       {
         id: '550e8400-e29b-41d4-a716-446655440002',
-        name: 'Test ${PASCAL_CASE_NAME} 2',
-        description: 'Second test ${ENTITY_NAME}',
+        // TODO: Add your domain fields here
         createdAt: new Date(),
         updatedAt: new Date(),
         deletedAt: null,
@@ -634,17 +595,19 @@ describe('${PASCAL_CASE_NAME} API Routes', () => {
       const testApp = new Hono();
       testApp.route('/', isolatedRoutes);
 
-      // Create test ${ENTITY_NAME}s
+      // TODO: Create test ${ENTITY_NAME}s with your domain fields
       await testApp.request('/', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ name: '${PASCAL_CASE_NAME} 1', description: 'First ${ENTITY_NAME}' }),
+        // TODO: Replace with your domain fields
+        body: JSON.stringify({ /* Add your required fields here */ }),
       });
 
       await testApp.request('/', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ name: '${PASCAL_CASE_NAME} 2', description: 'Second ${ENTITY_NAME}' }),
+        // TODO: Replace with your domain fields
+        body: JSON.stringify({ /* Add your required fields here */ }),
       });
 
       const res = await testApp.request('/');
@@ -653,10 +616,10 @@ describe('${PASCAL_CASE_NAME} API Routes', () => {
       const data = await res.json();
       expect(data.${ENTITY_NAME}s.length).toBeGreaterThanOrEqual(2);
 
-      // Check ${ENTITY_NAME}s are present (order might vary)
-      const names = data.${ENTITY_NAME}s.map((item: { name: string }) => item.name);
-      expect(names).toContain('${PASCAL_CASE_NAME} 1');
-      expect(names).toContain('${PASCAL_CASE_NAME} 2');
+      // TODO: Check ${ENTITY_NAME}s are present (adapt to your fields)
+      // Example: const values = data.${ENTITY_NAME}s.map((item: { fieldName: string }) => item.fieldName);
+      // expect(values).toContain('Expected Value 1');
+      // expect(values).toContain('Expected Value 2');
 
       await isolatedSetup.client.close();
     });
@@ -664,9 +627,9 @@ describe('${PASCAL_CASE_NAME} API Routes', () => {
 
   describe('POST /', () => {
     it('should create a new ${ENTITY_NAME} with valid data', async () => {
+      // TODO: Replace with your domain fields
       const ${ENTITY_NAME}Data = {
-        name: 'Test ${PASCAL_CASE_NAME}',
-        description: 'A test ${ENTITY_NAME}',
+        // TODO: Add required fields according to your schema
       };
 
       const res = await app.request('/', {
@@ -679,18 +642,17 @@ describe('${PASCAL_CASE_NAME} API Routes', () => {
 
       expect(res.status).toBe(201);
       const data = await res.json();
-      expect(data.${ENTITY_NAME}.name).toBe('Test ${PASCAL_CASE_NAME}');
-      expect(data.${ENTITY_NAME}.description).toBe('A test ${ENTITY_NAME}');
+      // TODO: Update assertions to match your domain fields
       expect(data.${ENTITY_NAME}.id).toBeTruthy();
       expect(data.${ENTITY_NAME}.createdAt).toBeTruthy();
       expect(data.${ENTITY_NAME}.updatedAt).toBeTruthy();
       expect(data.${ENTITY_NAME}.deletedAt).toBeNull();
     });
 
-    it('should validate name is required', async () => {
+    // TODO: Add validation tests based on your domain requirements
+    it('should validate required fields', async () => {
       const ${ENTITY_NAME}Data = {
-        name: '',
-        description: 'A test ${ENTITY_NAME}',
+        // TODO: Add invalid field values according to your schema
       };
 
       const res = await app.request('/', {
@@ -703,7 +665,8 @@ describe('${PASCAL_CASE_NAME} API Routes', () => {
 
       expect(res.status).toBe(400);
       const data = await res.json();
-      expect(data.error).toContain('Name is required');
+      // TODO: Update error message to match your validation
+      expect(data.error).toContain('validation failed');
     });
 
     it('should handle invalid JSON', async () => {
@@ -729,11 +692,12 @@ describe('${PASCAL_CASE_NAME} API Routes', () => {
       const testApp = new Hono();
       testApp.route('/', isolatedRoutes);
 
-      // Create a test ${ENTITY_NAME}
+      // TODO: Create a test ${ENTITY_NAME} with your domain fields
       const createRes = await testApp.request('/', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ name: 'Test ${PASCAL_CASE_NAME}', description: 'A test ${ENTITY_NAME}' }),
+        // TODO: Replace with your required fields
+        body: JSON.stringify({ /* Add your required fields here */ }),
       });
       const createData = await createRes.json();
       const ${ENTITY_NAME}Id = createData.${ENTITY_NAME}.id;
@@ -743,7 +707,7 @@ describe('${PASCAL_CASE_NAME} API Routes', () => {
       expect(res.status).toBe(200);
       const data = await res.json();
       expect(data.${ENTITY_NAME}.id).toBe(${ENTITY_NAME}Id);
-      expect(data.${ENTITY_NAME}.name).toBe('Test ${PASCAL_CASE_NAME}');
+      // TODO: Add assertions for your domain fields
 
       await isolatedSetup.client.close();
     });
@@ -798,8 +762,13 @@ fi
 
 echo ""
 echo "Next steps:"
-echo "1. Add the feature routes to your main server.ts:"
+echo "1. Implement domain-specific logic by replacing TODO comments"
+echo "2. Create decision tables using MCP tools:"
+echo "   - mcp__testing-mcp__create_decision_table for test scenarios"
+echo "   - mcp__testing-mcp__generate_tests to generate test code"
+echo "3. Replace generic test templates with generated MCP tests"
+echo "4. Add the feature routes to your main server.ts:"
 echo "   import create${PASCAL_CASE_NAME}Routes from './features/${FEATURE_NAME}/api/routes';"
 echo "   app.route('/${ENTITY_NAME}s', create${PASCAL_CASE_NAME}Routes(db));"
-echo "2. Create the database table for ${ENTITY_NAME}s with id, name, description, created_at, updated_at, deleted_at columns"
-echo "3. Run tests: yarn test src/features/${FEATURE_NAME}/"
+echo "5. Ensure database table structure matches your entity schema"
+echo "6. Run tests: yarn test src/features/${FEATURE_NAME}/"

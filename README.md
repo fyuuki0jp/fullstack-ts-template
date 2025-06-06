@@ -59,7 +59,7 @@ Feature Sliced Design (FSD)、CQRS、Railway Result型、Velona DIを採用し�
 ```bash
 # リポジトリのクローン
 git clone <your-repo-url>
-cd spa-hono
+cd fullstack-ts-template
 
 # 依存関係のインストール
 yarn install
@@ -86,8 +86,8 @@ yarn lint         # 全プロジェクトでESLintを実行
 yarn typecheck    # 全プロジェクトでTypeScript型チェック
 
 # 個別ワークスペース
-yarn workspace @spa-hono/backend dev    # バックエンドのみ
-yarn workspace @spa-hono/frontend dev   # フロントエンドのみ
+yarn workspace backend dev    # バックエンドのみ
+yarn workspace frontend dev   # フロントエンドのみ
 ```
 
 ## 🏗️ アーキテクチャ
@@ -121,10 +121,10 @@ yarn workspace @spa-hono/frontend dev   # フロントエンドのみ
 yarn test
 
 # バックエンドテストを実行
-yarn workspace @spa-hono/backend test
+yarn workspace backend test
 
 # フロントエンドテストを実行
-yarn workspace @spa-hono/frontend test
+yarn workspace frontend test
 
 # E2Eテストを実行
 yarn test:e2e

@@ -1,0 +1,98 @@
+{
+  "name": "Create User Validation Tests",
+  "feature": "user",
+  "operation": "createUser",
+  "description": "Decision table for create user command validation tests",
+  "columns": [
+    {
+      "name": "testDescription",
+      "type": "input",
+      "description": "Description of the test case"
+    },
+    {
+      "name": "name",
+      "type": "input",
+      "dataType": "string"
+    },
+    {
+      "name": "email",
+      "type": "input",
+      "dataType": "string"
+    },
+    {
+      "name": "success",
+      "type": "expected",
+      "dataType": "boolean"
+    },
+    {
+      "name": "errorMessage",
+      "type": "expected",
+      "dataType": "string"
+    }
+  ],
+  "rows": [
+    {
+      "testDescription": "should create a user with valid input",
+      "name": "John Doe",
+      "email": "john.doe@example.com",
+      "success": true,
+      "errorMessage": null
+    },
+    {
+      "testDescription": "should fail when name is empty",
+      "name": "",
+      "email": "john@example.com",
+      "success": false,
+      "errorMessage": "Name is required"
+    },
+    {
+      "testDescription": "should fail when name is whitespace only",
+      "name": "   ",
+      "email": "john@example.com",
+      "success": false,
+      "errorMessage": "Name is required"
+    },
+    {
+      "testDescription": "should fail when email is empty",
+      "name": "John Doe",
+      "email": "",
+      "success": false,
+      "errorMessage": "Email is required"
+    },
+    {
+      "testDescription": "should fail when email format is invalid",
+      "name": "John Doe",
+      "email": "invalid-email",
+      "success": false,
+      "errorMessage": "Invalid email format"
+    },
+    {
+      "testDescription": "should fail when name is too long",
+      "name": "ThisIsAVeryLongNameThatExceedsTheMaximumAllowedLengthForUserNamesInOurSystemAndShouldFailValidation",
+      "email": "john@example.com",
+      "success": false,
+      "errorMessage": "Name must be less than 100 characters"
+    },
+    {
+      "testDescription": "should fail when email is too long",
+      "name": "John Doe",
+      "email": "thisisaverylongemailaddressthatexceedsthemaximumallowedlengthforemailaddressesinourvalidationsystem@example.com",
+      "success": false,
+      "errorMessage": "Email must be less than 255 characters"
+    },
+    {
+      "testDescription": "should trim whitespace from name",
+      "name": "  John Doe  ",
+      "email": "john@example.com",
+      "success": true,
+      "errorMessage": null
+    },
+    {
+      "testDescription": "should handle special characters in name",
+      "name": "Jean-François O'Brien",
+      "email": "jean@example.com",
+      "success": true,
+      "errorMessage": null
+    }
+  ]
+}

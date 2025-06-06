@@ -28,7 +28,7 @@ jobs:
         run: yarn install --frozen-lockfile
 
       - name: Run backend unit tests
-        run: yarn workspace @spa-hono/backend test
+        run: yarn workspace backend test
 
       - name: Run frontend unit tests
-        run: yarn workspace @spa-hono/frontend test
+        run: yarn workspace frontend test

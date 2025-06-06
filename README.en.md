@@ -59,7 +59,7 @@ Full-stack monorepo with Feature Sliced Design (FSD), CQRS, Railway Result types
 ```bash
 # Clone the repository
 git clone <your-repo-url>
-cd spa-hono
+cd fullstack-ts-template
 
 # Install dependencies
 yarn install
@@ -86,8 +86,8 @@ yarn lint         # Run ESLint on all projects
 yarn typecheck    # TypeScript type check all projects
 
 # Individual workspaces
-yarn workspace @spa-hono/backend dev    # Backend only
-yarn workspace @spa-hono/frontend dev   # Frontend only
+yarn workspace backend dev    # Backend only
+yarn workspace frontend dev   # Frontend only
 ```
 
 ## 🏗️ Architecture
@@ -121,10 +121,10 @@ yarn workspace @spa-hono/frontend dev   # Frontend only
 yarn test
 
 # Run backend tests
-yarn workspace @spa-hono/backend test
+yarn workspace backend test
 
 # Run frontend tests
-yarn workspace @spa-hono/frontend test
+yarn workspace frontend test
 
 # Run E2E tests
 yarn test:e2e
