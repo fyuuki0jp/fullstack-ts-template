@@ -17,17 +17,15 @@ export default defineConfig({
         'vitest.config.ts',
         'drizzle.config.ts',
       ],
-      include: [
-        'src/**/*.ts'
-      ],
+      include: ['src/**/*.ts'],
       thresholds: {
         global: {
           branches: 80,
           functions: 80,
           lines: 80,
-          statements: 80
-        }
-      }
+          statements: 80,
+        },
+      },
     },
     // setupFiles: ['./src/test-setup.ts'],
   },
