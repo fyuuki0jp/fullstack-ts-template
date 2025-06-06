@@ -67,7 +67,7 @@
       "testValues": {
         "valid": [["sports", "music"], [], ["reading"]],
         "invalid": [["a".repeat(11)]], 
-        "boundary": [Array(10).fill("interest")]
+        "boundary": [["interest", "interest", "interest", "interest", "interest", "interest", "interest", "interest", "interest", "interest"]]
       }
     }
   ],
