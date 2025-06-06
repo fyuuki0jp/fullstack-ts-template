@@ -2,6 +2,16 @@
 
 # Frontend Feature Boilerplate Generator
 # Usage: ./create-feature.sh <feature-name> [entity-name] [--dry-run]
+#
+# This script creates a frontend feature template with TODO comments for domain-specific implementation.
+# After running this script, you should:
+# 1. Update the shared types based on your backend entity schema
+# 2. Implement the form fields and validation logic according to your domain
+# 3. Update the list component to display your entity's specific fields
+# 4. Use MCP testing tools for comprehensive test coverage:
+#    - Analyze backend entity schema to understand required fields
+#    - Generate frontend validation tests using decision tables
+#    - Test API hooks with various response scenarios
 
 FEATURE_NAME=$1
 ENTITY_NAME=${2:-$1}  # Use feature name as entity name if not provided
@@ -50,11 +60,18 @@ else
     mkdir -p "$FEATURE_DIR/model"
 fi
 
-# Check if backend entity exists
-BACKEND_ENTITY_FILE="backend/src/entities/${ENTITY_NAME}.ts"
-if [ ! -f "$BACKEND_ENTITY_FILE" ]; then
+# Check if backend entity exists (updated for new directory structure)
+BACKEND_ENTITY_DIR="backend/src/entities/${ENTITY_NAME}"
+BACKEND_ENTITY_SCHEMA="$BACKEND_ENTITY_DIR/schema.ts"
+BACKEND_ENTITY_FILE="$BACKEND_ENTITY_DIR/entity.ts"
+
+if [ ! -d "$BACKEND_ENTITY_DIR" ] || [ ! -f "$BACKEND_ENTITY_SCHEMA" ] || [ ! -f "$BACKEND_ENTITY_FILE" ]; then
     echo "⚠️  Backend entity '${ENTITY_NAME}' not found. Please create it first using:"
     echo "   ./tools/backend/create-entity.sh ${ENTITY_NAME}"
+    echo ""
+    echo "Expected files:"
+    echo "   - $BACKEND_ENTITY_SCHEMA"
+    echo "   - $BACKEND_ENTITY_FILE"
     exit 1
 fi
 
@@ -85,28 +102,26 @@ export type ${PASCAL_CASE_NAME} = Omit<
   deletedAt: string | null;
 };
 
-// Frontend ${PASCAL_CASE_NAME} schema for validation (dates as ISO strings)
+// TODO: Update frontend schema based on your actual entity fields
+// This is a template - replace with fields from your backend entity schema
 const _Frontend${PASCAL_CASE_NAME}Schema = z.object({
   id: z.string().uuid().brand<'${PASCAL_CASE_NAME}Id'>(),
-  name: z.string().trim().min(1).max(100),
-  description: z.string().trim().max(500).nullable(),
+  // TODO: Add your actual entity fields here based on backend schema
+  // Example: title: z.string().min(1),
+  // Example: description: z.string().nullable(),
+  // Example: status: z.enum(['active', 'inactive']),
   createdAt: z.string().datetime(),
   updatedAt: z.string().datetime(),
   deletedAt: z.string().datetime().nullable(),
 });
 
-// Frontend input schema (same as backend)
+// TODO: Update input schema based on your actual Create${PASCAL_CASE_NAME}Input from backend
+// This schema should match your backend entity's input requirements
 const _Create${PASCAL_CASE_NAME}InputSchema = z.object({
-  name: z
-    .string()
-    .trim()
-    .min(1, 'Name is required')
-    .max(100, 'Name must be 100 characters or less'),
-  description: z
-    .string()
-    .trim()
-    .max(500, 'Description must be 500 characters or less')
-    .optional(),
+  // TODO: Replace with your actual required input fields
+  // Example: title: z.string().trim().min(1, 'Title is required'),
+  // Example: description: z.string().trim().optional(),
+  // Example: priority: z.enum(['high', 'medium', 'low']).optional(),
 });
 
 // Validation helpers
@@ -478,64 +493,62 @@ interface ${PASCAL_CASE_NAME}FormProps {
 }
 
 export const ${PASCAL_CASE_NAME}Form: FC<${PASCAL_CASE_NAME}FormProps> = ({ onSuccess }) => {
-  const [name, setName] = useState('');
-  const [description, setDescription] = useState('');
-  const [nameError, setNameError] = useState('');
-  const [descriptionError, setDescriptionError] = useState('');
+  // TODO: Replace with your actual entity fields
+  // Example state variables based on your entity schema:
+  // const [title, setTitle] = useState('');
+  // const [description, setDescription] = useState('');
+  // const [priority, setPriority] = useState<'high' | 'medium' | 'low'>('medium');
+  
+  // TODO: Add corresponding error states for each field
+  // const [titleError, setTitleError] = useState('');
+  // const [descriptionError, setDescriptionError] = useState('');
+  
   const { mutate: create${PASCAL_CASE_NAME}, isPending, error } = useCreate${PASCAL_CASE_NAME}();
 
   const validateForm = (): Create${PASCAL_CASE_NAME}Input | null => {
-    const validation = validateCreate${PASCAL_CASE_NAME}InputWithErrors({ name, description });
-    if (validation.success) {
-      setNameError('');
-      setDescriptionError('');
-      return validation.data;
-    }
-
-    setNameError(validation.errors?.name || '');
-    setDescriptionError(validation.errors?.description || '');
-    return null;
-  };
-
-  const handleNameChange = (value: string) => {
-    setName(value);
+    // TODO: Replace with your actual field values
+    // const validation = validateCreate${PASCAL_CASE_NAME}InputWithErrors({ 
+    //   title, 
+    //   description, 
+    //   priority 
+    // });
+    // if (validation.success) {
+    //   setTitleError('');
+    //   setDescriptionError('');
+    //   return validation.data;
+    // }
+    //
+    // setTitleError(validation.errors?.title || '');
+    // setDescriptionError(validation.errors?.description || '');
+    // return null;
     
-    // Real-time validation for name
-    if (value.trim()) {
-      const validation = validateCreate${PASCAL_CASE_NAME}InputWithErrors({
-        name: value,
-        description: description || undefined,
-      });
-      if (!validation.success && validation.errors?.name) {
-        setNameError(validation.errors.name);
-      } else {
-        setNameError('');
-      }
-    } else {
-      setNameError('');
-    }
+    // TODO: Implement validation based on your entity schema
+    throw new Error('TODO: Implement validateForm based on your entity fields');
   };
 
-  const handleDescriptionChange = (value: string) => {
-    setDescription(value);
-    
-    // Real-time validation for description
-    if (value.trim()) {
-      const validation = validateCreate${PASCAL_CASE_NAME}InputWithErrors({
-        name: name || 'ValidName', // Dummy value for other field
-        description: value,
-      });
-      if (!validation.success && validation.errors?.description) {
-        setDescriptionError(validation.errors.description);
-      } else {
-        setDescriptionError('');
-      }
-    } else {
-      setDescriptionError('');
-    }
-  };
+  // TODO: Implement field change handlers based on your entity schema
+  // Example handlers:
+  // const handleTitleChange = (value: string) => {
+  //   setTitle(value);
+  //   // Real-time validation
+  //   if (value.trim()) {
+  //     const validation = validateCreate${PASCAL_CASE_NAME}InputWithErrors({
+  //       title: value,
+  //       description: description || undefined,
+  //       priority
+  //     });
+  //     if (!validation.success && validation.errors?.title) {
+  //       setTitleError(validation.errors.title);
+  //     } else {
+  //       setTitleError('');
+  //     }
+  //   } else {
+  //     setTitleError('');
+  //   }
+  // };
 
-  const isFormValid = name.trim() && !nameError && !descriptionError;
+  // TODO: Implement form validation based on your entity schema
+  // const isFormValid = title.trim() && !titleError && !descriptionError;
 
   const handleSubmit = (e: FormEvent) => {
     e.preventDefault();
@@ -546,15 +559,19 @@ export const ${PASCAL_CASE_NAME}Form: FC<${PASCAL_CASE_NAME}FormProps> = ({ onSu
       return;
     }
 
-    create${PASCAL_CASE_NAME}(validatedInput, {
-      onSuccess: () => {
-        setName('');
-        setDescription('');
-        setNameError('');
-        setDescriptionError('');
-        onSuccess?.();
-      },
-    });
+    // TODO: Reset form fields after successful creation
+    // create${PASCAL_CASE_NAME}(validatedInput, {
+    //   onSuccess: () => {
+    //     setTitle('');
+    //     setDescription('');
+    //     setTitleError('');
+    //     setDescriptionError('');
+    //     onSuccess?.();
+    //   },
+    // });
+    
+    // TODO: Implement form submission based on your entity schema
+    throw new Error('TODO: Implement handleSubmit based on your entity fields');
   };
 
   return (
@@ -564,17 +581,18 @@ export const ${PASCAL_CASE_NAME}Form: FC<${PASCAL_CASE_NAME}FormProps> = ({ onSu
       noValidate
       aria-label="Create new ${ENTITY_NAME}"
     >
+      {/* TODO: Replace with your actual form fields based on entity schema */}
+      {/* Example fields:
       <Input
-        label="Name"
+        label="Title"
         type="text"
-        value={name}
-        onChange={handleNameChange}
-        placeholder="Enter ${ENTITY_NAME} name"
+        value={title}
+        onChange={handleTitleChange}
+        placeholder="Enter ${ENTITY_NAME} title"
         isRequired
         isDisabled={isPending}
-        error={nameError}
+        error={titleError}
         autoComplete="off"
-        aria-describedby={nameError ? 'name-error' : undefined}
       />
 
       <Input
@@ -586,8 +604,19 @@ export const ${PASCAL_CASE_NAME}Form: FC<${PASCAL_CASE_NAME}FormProps> = ({ onSu
         isDisabled={isPending}
         error={descriptionError}
         autoComplete="off"
-        aria-describedby={descriptionError ? 'description-error' : undefined}
       />
+
+      <select
+        value={priority}
+        onChange={(e) => setPriority(e.target.value as 'high' | 'medium' | 'low')}
+        className="border rounded px-3 py-2"
+        disabled={isPending}
+      >
+        <option value="high">High Priority</option>
+        <option value="medium">Medium Priority</option>
+        <option value="low">Low Priority</option>
+      </select>
+      */}
 
       {error && (
         <div
@@ -601,7 +630,9 @@ export const ${PASCAL_CASE_NAME}Form: FC<${PASCAL_CASE_NAME}FormProps> = ({ onSu
 
       <Button
         type="submit"
-        isDisabled={isPending || !isFormValid}
+        // TODO: Update with your form validation
+        // isDisabled={isPending || !isFormValid}
+        isDisabled={isPending}
         aria-describedby={isPending ? 'submit-status' : undefined}
       >
         {isPending ? 'Creating...' : 'Create ${PASCAL_CASE_NAME}'}
@@ -661,10 +692,22 @@ export const ${PASCAL_CASE_NAME}List: FC = () => {
           <Card key={${ENTITY_NAME}.id}>
             <div className="flex justify-between items-start">
               <div className="flex-1">
-                <h3 className="text-lg font-semibold">{${ENTITY_NAME}.name}</h3>
+                {/* TODO: Update with your actual entity fields */}
+                {/* Example display based on your entity schema:
+                <h3 className="text-lg font-semibold">{${ENTITY_NAME}.title}</h3>
                 {${ENTITY_NAME}.description && (
                   <p className="text-gray-600 mt-1">{${ENTITY_NAME}.description}</p>
                 )}
+                <div className="flex items-center gap-2 mt-2">
+                  <span className={\`px-2 py-1 text-xs rounded \${
+                    ${ENTITY_NAME}.priority === 'high' ? 'bg-red-100 text-red-800' :
+                    ${ENTITY_NAME}.priority === 'medium' ? 'bg-yellow-100 text-yellow-800' :
+                    'bg-green-100 text-green-800'
+                  }\`}>
+                    {${ENTITY_NAME}.priority}
+                  </span>
+                </div>
+                */}
                 <p className="text-sm text-gray-400 mt-2">
                   Created: {new Date(${ENTITY_NAME}.createdAt).toLocaleDateString()}
                 </p>
