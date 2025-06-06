@@ -1,5 +1,5 @@
 {
-  "name": "@spa-hono/backend",
+  "name": "backend",
   "version": "1.0.0",
   "type": "module",
   "private": true,
@@ -12,6 +12,7 @@
     "start": "node dist/server.js",
     "test": "vitest run",
     "test:watch": "vitest",
+    "test:coverage": "vitest run --coverage",
     "lint": "eslint .",
     "typecheck": "tsc --noEmit",
     "drizzle:generate": "drizzle-kit generate",
@@ -35,6 +36,7 @@
     "@fyuuki0jp/eslint-plugin-railway": "^0.1.0",
     "@types/better-sqlite3": "^7.6.13",
     "@types/node": "^20.11.17",
+    "@vitest/coverage-v8": "^3.2.2",
     "tsx": "^4.19.4",
     "vitest": "^3.1.4"
   }

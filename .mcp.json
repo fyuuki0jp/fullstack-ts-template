@@ -7,6 +7,11 @@
     "playwright": {
       "command": "npx",
       "args": ["@playwright/mcp@latest"]
+    },
+    "testing-mcp": {
+        "command": "node",
+        "args": ["/workspaces/fullstack-ts-template/packages/testing-mcp/dist/index.js"],
+        "env": {}
     }
   }
 }

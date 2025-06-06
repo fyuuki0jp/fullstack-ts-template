@@ -1,14 +1,15 @@
 {
-  "name": "spa-hono-monorepo",
+  "name": "spa-monorepo",
   "type": "module",
   "private": true,
   "workspaces": [
     "backend",
-    "frontend"
+    "frontend",
+    "packages/testing-mcp"
   ],
   "scripts": {
-    "dev": "yarn workspace @spa-hono/frontend dev & yarn workspace @spa-hono/backend dev",
-    "dev:test": "yarn workspace @spa-hono/frontend dev:test & yarn workspace @spa-hono/backend dev:test",
+    "dev": "yarn workspace frontend dev & yarn workspace backend dev",
+    "dev:test": "yarn workspace frontend dev:test & yarn workspace backend dev:test",
     "build": "yarn workspaces run build",
     "test": "yarn workspaces run test",
     "test:e2e": "playwright test",
