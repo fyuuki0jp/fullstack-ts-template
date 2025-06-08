@@ -27,6 +27,22 @@ jobs:
       - name: Install dependencies
         run: yarn install --frozen-lockfile
 
+      - name: Debug package installation
+        run: |
+          echo "=== Checking shared-result package installation ==="
+          echo "Root node_modules:"
+          ls -la node_modules/ | grep shared || echo "shared-result not found in root node_modules"
+          echo "Backend node_modules:"
+          ls -la backend/node_modules/ | grep shared || echo "shared-result not found in backend/node_modules"
+          echo "Frontend node_modules:"
+          ls -la frontend/node_modules/ | grep shared || echo "shared-result not found in frontend/node_modules"
+          echo "Packages result contents:"
+          ls -la packages/result/
+          echo "Packages result dist contents:"
+          ls -la packages/result/dist/ || echo "dist directory not found"
+          echo "Checking yarn workspaces:"
+          yarn workspaces info
+
       - name: Run linting
         run: yarn lint
 

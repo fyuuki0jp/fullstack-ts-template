@@ -27,6 +27,25 @@ jobs:
       - name: Install dependencies
         run: yarn install --frozen-lockfile
 
+      - name: Debug package installation
+        run: |
+          echo "=== Checking shared-result package installation ==="
+          echo "Backend node_modules:"
+          ls -la backend/node_modules/ | grep shared || echo "shared-result not found in backend/node_modules"
+          echo "Frontend node_modules:"
+          ls -la frontend/node_modules/ | grep shared || echo "shared-result not found in frontend/node_modules"
+          echo "Packages directory:"
+          ls -la packages/result/
+          echo "Result package dist:"
+          ls -la packages/result/dist/ || echo "dist directory not found"
+          echo "Backend package.json dependencies:"
+          cat backend/package.json | grep shared-result || echo "shared-result not found in backend deps"
+          echo "Frontend package.json dependencies:"
+          cat frontend/package.json | grep shared-result || echo "shared-result not found in frontend deps"
+          echo "Testing Node.js resolution:"
+          cd backend && node -e "console.log('Resolving shared-result:', require.resolve('shared-result'))" || echo "Failed to resolve shared-result from backend"
+          cd frontend && node -e "console.log('Resolving shared-result:', require.resolve('shared-result'))" || echo "Failed to resolve shared-result from frontend"
+
       - name: Run backend unit tests
         run: yarn workspace backend test
 
