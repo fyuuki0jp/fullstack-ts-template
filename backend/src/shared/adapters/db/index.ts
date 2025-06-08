@@ -1,4 +1,4 @@
-import type { Result } from '@shared/result';
+import type { Result } from 'shared-result';
 
 export interface DbAdapter {
   query<T>(sql: string, params?: unknown[]): Promise<Result<T[], Error>>;

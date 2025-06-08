@@ -1,5 +1,5 @@
 {
-  "name": "@shared/result",
+  "name": "shared-result",
   "version": "1.0.0",
   "description": "Result type utilities for error handling",
   "type": "module",

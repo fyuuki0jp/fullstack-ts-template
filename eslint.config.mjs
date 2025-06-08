@@ -1,7 +1,7 @@
 import js from '@eslint/js';
 import typescript from '@typescript-eslint/eslint-plugin';
 import tsParser from '@typescript-eslint/parser';
-import resultRules from '@shared/result/eslint-rules';
+import resultRules from 'shared-result/eslint-rules';
 import prettier from 'eslint-config-prettier';
 import prettierPlugin from 'eslint-plugin-prettier';
 
@@ -50,7 +50,7 @@ export default [
     plugins: {
       '@typescript-eslint': typescript,
       prettier: prettierPlugin,
-      '@shared/result': resultRules,
+      'shared-result': resultRules,
     },
     rules: {
       ...typescript.configs.recommended.rules,
@@ -69,14 +69,14 @@ export default [
     files: ['backend/src/features/**/*.ts', 'backend/src/entities/**/*.ts'],
     rules: {
       // Enable Railway rules only for business logic files
-      '@shared/result/require-result-return-type': 'error',
+      'shared-result/require-result-return-type': 'error',
     },
   },
   {
     files: ['**/*.spec.ts', '**/*.spec.tsx'],
     rules: {
       'no-throw-literal': 'off',
-      '@shared/result/require-result-return-type': 'off',
+      'shared-result/require-result-return-type': 'off',
     },
   },
 ];
