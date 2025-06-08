@@ -30,17 +30,17 @@ describe('getUsers query', () => {
 
     const result = await getUsersQuery()();
 
-    expect(result.success).toBe(true);
-    if (result.success) {
-      expect(result.data.length).toBeGreaterThanOrEqual(2);
+    expect(result.ok).toBe(true);
+    if (result.ok) {
+      expect(result.value.length).toBeGreaterThanOrEqual(2);
 
       // Check users are present (order might vary)
-      const emails = result.data.map((u) => u.email);
+      const emails = result.value.map((u) => u.email);
       expect(emails).toContain('user1@example.com');
       expect(emails).toContain('user2@example.com');
 
       // Check that all required fields are present
-      result.data.forEach((user) => {
+      result.value.forEach((user) => {
         expect(user.id).toBeDefined();
         expect(user.createdAt).toBeInstanceOf(Date);
         expect(user.updatedAt).toBeInstanceOf(Date);
@@ -56,10 +56,10 @@ describe('getUsers query', () => {
 
     const result = await isolatedGetUsers()();
 
-    expect(result.success).toBe(true);
-    if (result.success) {
-      expect(result.data).toEqual([]);
-      expect(result.data).toHaveLength(0);
+    expect(result.ok).toBe(true);
+    if (result.ok) {
+      expect(result.value).toEqual([]);
+      expect(result.value).toHaveLength(0);
     }
 
     await isolatedSetup.client.close();
@@ -75,14 +75,14 @@ describe('getUsers query', () => {
     const result3 = await getUsersQuery()();
 
     // Each call should return the same result
-    expect(result1.success).toBe(true);
-    expect(result2.success).toBe(true);
-    expect(result3.success).toBe(true);
+    expect(result1.ok).toBe(true);
+    expect(result2.ok).toBe(true);
+    expect(result3.ok).toBe(true);
 
-    if (result1.success && result2.success && result3.success) {
-      expect(result1.data.length).toBeGreaterThan(0);
-      expect(result1.data.length).toBe(result2.data.length);
-      expect(result2.data.length).toBe(result3.data.length);
+    if (result1.ok && result2.ok && result3.ok) {
+      expect(result1.value.length).toBeGreaterThan(0);
+      expect(result1.value.length).toBe(result2.value.length);
+      expect(result2.value.length).toBe(result3.value.length);
     }
   });
 
@@ -96,16 +96,16 @@ describe('getUsers query', () => {
     const result1 = await getUsersQuery()();
     const result2 = await getUsersQuery()();
 
-    expect(result1.success).toBe(true);
-    expect(result2.success).toBe(true);
+    expect(result1.ok).toBe(true);
+    expect(result2.ok).toBe(true);
 
-    if (result1.success && result2.success) {
-      expect(result1.data.length).toBeGreaterThanOrEqual(3);
-      expect(result2.data.length).toBe(result1.data.length);
+    if (result1.ok && result2.ok) {
+      expect(result1.value.length).toBeGreaterThanOrEqual(3);
+      expect(result2.value.length).toBe(result1.value.length);
 
       // Check that the order is consistent between calls
-      const emails1 = result1.data.map((user) => user.email);
-      const emails2 = result2.data.map((user) => user.email);
+      const emails1 = result1.value.map((user) => user.email);
+      const emails2 = result2.value.map((user) => user.email);
       expect(emails1).toEqual(emails2);
 
       // Check all users are present

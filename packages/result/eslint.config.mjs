@@ -1,42 +1,15 @@
 import js from '@eslint/js';
 import typescript from '@typescript-eslint/eslint-plugin';
 import tsParser from '@typescript-eslint/parser';
-import resultRules from '@fullstack-ts-template/result/eslint-rules';
 import prettier from 'eslint-config-prettier';
 import prettierPlugin from 'eslint-plugin-prettier';
+import resultRules from './src/eslint-rules/index.js';
 
 export default [
   js.configs.recommended,
   prettier,
   {
-    ignores: ['**/dist/**', '**/node_modules/**', '**/.turbo/**', '**/coverage/**'],
-  },
-  {
-    files: ['backend/**/*.ts', 'backend/**/*.tsx'],
-    languageOptions: {
-      globals: {
-        console: 'readonly',
-        process: 'readonly',
-        Buffer: 'readonly',
-        __dirname: 'readonly',
-        __filename: 'readonly',
-      },
-    },
-  },
-  {
-    files: ['frontend/**/*.ts', 'frontend/**/*.tsx'],
-    languageOptions: {
-      globals: {
-        console: 'readonly',
-        document: 'readonly',
-        process: 'readonly',
-        window: 'readonly',
-        HTMLButtonElement: 'readonly',
-        HTMLInputElement: 'readonly',
-        FormEvent: 'readonly',
-        Event: 'readonly',
-      },
-    },
+    ignores: ['**/dist/**', '**/node_modules/**', '**/coverage/**'],
   },
   {
     files: ['**/*.ts', '**/*.tsx'],
@@ -61,19 +34,13 @@ export default [
       ],
       '@typescript-eslint/explicit-module-boundary-types': 'off',
       '@typescript-eslint/no-explicit-any': 'error',
-      // Railway-oriented programming rules - disabled by default
+      // Railway-oriented programming rules
       'no-throw-literal': 'error',
-    },
-  },
-  {
-    files: ['backend/src/features/**/*.ts', 'backend/src/entities/**/*.ts'],
-    rules: {
-      // Enable Railway rules only for business logic files
       '@fullstack-ts-template/result/require-result-return-type': 'error',
     },
   },
   {
-    files: ['**/*.spec.ts', '**/*.spec.tsx'],
+    files: ['**/*.spec.ts', '**/*.spec.tsx', '**/*.test.ts', '**/*.test.tsx'],
     rules: {
       'no-throw-literal': 'off',
       '@fullstack-ts-template/result/require-result-return-type': 'off',

@@ -1,6 +1,5 @@
 import { depend } from 'velona';
-import { isErr } from '@fyuuki0jp/railway-result';
-import type { Result } from '@fyuuki0jp/railway-result';
+import { isErr, type Result } from '@fullstack-ts-template/result';
 import {
   type User,
   UserEntity,
@@ -18,7 +17,7 @@ export const createUser = depend(
         return validationResult;
       }
 
-      const validatedInput = validationResult.data;
+      const validatedInput = validationResult.value;
 
       // Create user using entity
       const userEntity = UserEntity.inject({ db })();

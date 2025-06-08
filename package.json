@@ -5,7 +5,8 @@
   "workspaces": [
     "backend",
     "frontend",
-    "packages/testing-mcp"
+    "packages/*",
+    "tools/mcp/*"
   ],
   "scripts": {
     "dev": "yarn workspace frontend dev & yarn workspace backend dev",
