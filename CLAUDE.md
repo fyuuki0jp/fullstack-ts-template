@@ -172,9 +172,9 @@ yarn workspace frontend test:watch src/features/user-management/ui/
 5. **Check coverage** - ensure 80%+ coverage before completing features
 6. **Quality gates** - run `yarn lint && yarn typecheck && yarn build && yarn test` before commits
 
-## Database (SQLite + Drizzle)
+## Database (PGLite + Drizzle)
 
-- **Development**: Uses SQLite with better-sqlite3
+- **Development**: Uses PGLite
 - **Testing**: In-memory database via `DATABASE_MODE=memory`
 - **Schema**: Drizzle ORM with automatic migrations
 - **Commands**: `yarn workspace backend drizzle:*` for schema operations
@@ -213,3 +213,160 @@ yarn workspace frontend test:watch src/features/user-management/ui/
 - **Commands**: `commands/[action]-[entity].ts`
 - **Queries**: `queries/get-[entities].ts`
 - **Entities**: `entities/[entity]/entity.ts`
+
+## Creating Shared Packages
+
+This monorepo supports creating shared packages in the `packages/` directory for code reuse across workspaces.
+
+### Package Structure
+
+```
+packages/[package-name]/
+├── src/
+│   └── index.ts                # Main implementation
+├── dist/                       # Built output (auto-generated)
+├── package.json                # Package configuration
+├── tsconfig.json              # TypeScript configuration
+├── eslint.config.mjs          # ESLint configuration
+└── README.md                   # Package documentation
+```
+
+### Essential Configuration Files
+
+#### package.json
+```json
+{
+  "name": "package-name",
+  "version": "1.0.0", 
+  "description": "Package description",
+  "type": "module",
+  "main": "./dist/index.js",
+  "module": "./dist/index.js",
+  "types": "./dist/index.d.ts",
+  "exports": {
+    ".": {
+      "types": "./dist/index.d.ts",
+      "import": "./dist/index.js",
+      "default": "./dist/index.js"
+    }
+  },
+  "scripts": {
+    "prepare": "tsc",
+    "build": "tsc",
+    "dev": "tsc --watch",
+    "test": "vitest",
+    "test:watch": "vitest --watch", 
+    "test:coverage": "vitest --coverage",
+    "typecheck": "tsc --noEmit",
+    "lint": "eslint src"
+  },
+  "devDependencies": {
+    "@types/node": "^20.11.17",
+    "typescript": "^5.7.2"
+  },
+  "files": ["dist", "package.json"],
+  "license": "MIT"
+}
+```
+
+#### tsconfig.json
+```json
+{
+  "extends": "../../tsconfig.json",
+  "compilerOptions": {
+    "outDir": "./dist",
+    "rootDir": "./src",
+    "declaration": true,
+    "declarationMap": true,
+    "sourceMap": true
+  },
+  "include": ["src/**/*"],
+  "exclude": ["dist", "node_modules", "**/*.spec.ts", "**/*.test.ts"]
+}
+```
+
+#### eslint.config.mjs
+```javascript
+import js from '@eslint/js';
+import typescript from '@typescript-eslint/eslint-plugin';
+import tsParser from '@typescript-eslint/parser';
+
+export default [
+  js.configs.recommended,
+  {
+    files: ['src/**/*.ts', 'src/**/*.js'],
+    languageOptions: {
+      parser: tsParser,
+      parserOptions: {
+        ecmaVersion: 2022,
+        sourceType: 'module',
+      },
+    },
+    plugins: {
+      '@typescript-eslint': typescript,
+    },
+    rules: {
+      ...typescript.configs.recommended.rules,
+      '@typescript-eslint/no-explicit-any': 'error',
+      '@typescript-eslint/explicit-module-boundary-types': 'off',
+    },
+  },
+  {
+    files: ['**/*.spec.ts', '**/*.test.ts'],
+    rules: {
+      '@typescript-eslint/no-explicit-any': 'off',
+    },
+  },
+];
+```
+
+### Integration Steps
+
+1. **Add to workspace**: Root `package.json` includes `"packages/*"` in workspaces
+2. **Install in consumers**: Add dependency with `"package-name": "file:../packages/package-name"`
+3. **Update CI workflows**: Add build step for shared packages:
+   ```yaml
+   - name: Build shared packages
+     run: yarn workspace package-name build
+   - name: Refresh package links
+     run: yarn install --force
+   ```
+
+### Best Practices
+
+- **Package naming**: Use simple names without `@` characters to avoid conflicts with Vitest aliases
+- **ESM first**: All packages use `"type": "module"` for ES module support
+- **TypeScript strict**: Enable strict type checking with declaration files
+- **Build before test**: CI must build packages before running tests
+- **Symlink refresh**: Run `yarn install --force` after building to refresh symlinks
+- **Version alignment**: Use consistent versions across all workspaces (especially Vitest)
+
+### Example: Railway Result Package
+
+The `result` package demonstrates this pattern, providing functional error handling:
+
+```typescript
+// packages/result/src/index.ts
+export type Result<T, E extends Error> = Ok<T> | Err<E>;
+
+export const ok = <T>(value: T): Ok<T> => ({
+  ok: true,
+  value,
+  error: null,
+});
+
+export const err = <E extends Error>(error: E): Err<E> => ({
+  ok: false,
+  value: null,
+  error,
+});
+```
+
+Usage across workspaces:
+```typescript
+import { ok, err, type Result } from 'result';
+
+export const createUser = async (input: unknown): Promise<Result<User, Error>> => {
+  // Implementation using Railway Result pattern
+};
+```
