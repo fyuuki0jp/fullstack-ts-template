@@ -30,7 +30,7 @@ jobs:
       - name: Build packages
         run: yarn workspace @fullstack-ts-template/result build
 
-      - name: Install dependencies
+      - name: Re-install to update symlinks
         run: yarn install --frozen-lockfile
 
       - name: Run backend unit tests
