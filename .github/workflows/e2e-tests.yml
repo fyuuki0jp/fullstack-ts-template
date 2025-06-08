@@ -28,6 +28,21 @@ jobs:
       - name: Install dependencies
         run: yarn install --frozen-lockfile
 
+      - name: Build shared-result package
+        run: yarn workspace shared-result build
+
+      - name: Refresh package links
+        run: yarn install --force
+
+      - name: Verify shared-result package
+        run: |
+          echo "Checking shared-result dist files:"
+          ls -la packages/result/dist/ || echo "No dist directory"
+          echo "Checking backend symlink:"
+          ls -la backend/node_modules/shared-result/dist/ || echo "No backend symlink dist"
+          echo "Testing package resolution:"
+          (cd backend && node -e "console.log('shared-result resolved to:', require.resolve('shared-result'))") || echo "Resolution failed"
+
       - name: Install Playwright browsers
         run: npx playwright install --with-deps
 
