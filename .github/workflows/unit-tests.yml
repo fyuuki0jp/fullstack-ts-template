@@ -27,6 +27,9 @@ jobs:
       - name: Install dependencies
         run: yarn install --frozen-lockfile
 
+      - name: Build shared-result package
+        run: yarn workspace shared-result build
+
       - name: Debug package installation
         run: |
           echo "=== Checking shared-result package installation ==="
@@ -45,6 +48,10 @@ jobs:
           echo "Testing Node.js resolution:"
           cd backend && node -e "console.log('Resolving shared-result:', require.resolve('shared-result'))" || echo "Failed to resolve shared-result from backend"
           cd frontend && node -e "console.log('Resolving shared-result:', require.resolve('shared-result'))" || echo "Failed to resolve shared-result from frontend"
+          echo "Testing ESM import:"
+          cd backend && node --input-type=module -e "import('shared-result').then(() => console.log('ESM import successful')).catch(e => console.log('ESM import failed:', e.message))"
+          echo "Checking package.json exports:"
+          cat packages/result/package.json | grep -A 10 '"exports"' || echo "No exports field found"
 
       - name: Run backend unit tests
         run: yarn workspace backend test

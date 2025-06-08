@@ -27,6 +27,9 @@ jobs:
       - name: Install dependencies
         run: yarn install --frozen-lockfile
 
+      - name: Build shared-result package
+        run: yarn workspace shared-result build
+
       - name: Debug package installation
         run: |
           echo "=== Checking shared-result package installation ==="
@@ -42,6 +45,10 @@ jobs:
           ls -la packages/result/dist/ || echo "dist directory not found"
           echo "Checking yarn workspaces:"
           yarn workspaces info
+          echo "Testing ESM import resolution:"
+          node --input-type=module -e "import('shared-result').then(() => console.log('ESM import works')).catch(e => console.log('ESM import failed:', e.message))"
+          echo "Package build status:"
+          cat packages/result/package.json | grep -A 5 '"scripts"'
 
       - name: Run linting
         run: yarn lint
