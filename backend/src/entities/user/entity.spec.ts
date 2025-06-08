@@ -2,7 +2,7 @@
 import { describe, it, expect, beforeAll, afterAll } from 'vitest';
 import { UserEntity } from './entity';
 import { setupTestDatabase } from '../../shared/adapters/db/pglite';
-import { isErr } from '@fyuuki0jp/railway-result';
+import { isErr } from 'result';
 import type { PGlite } from '@electric-sql/pglite';
 import type { DrizzleDb } from '../../shared/adapters/db/pglite';
 
@@ -31,14 +31,14 @@ describe('UserEntity', () => {
 
       const result = await userEntity().create(input);
 
-      expect(result.success).toBe(true);
-      if (result.success) {
-        expect(result.data.email).toBe(input.email);
-        expect(result.data.name).toBe(input.name);
-        expect(result.data.id).toBeDefined();
-        expect(result.data.createdAt).toBeInstanceOf(Date);
-        expect(result.data.updatedAt).toBeInstanceOf(Date);
-        expect(result.data.deletedAt).toBeNull();
+      expect(result.ok).toBe(true);
+      if (result.ok) {
+        expect(result.value.email).toBe(input.email);
+        expect(result.value.name).toBe(input.name);
+        expect(result.value.id).toBeDefined();
+        expect(result.value.createdAt).toBeInstanceOf(Date);
+        expect(result.value.updatedAt).toBeInstanceOf(Date);
+        expect(result.value.deletedAt).toBeNull();
       }
     });
 
@@ -50,7 +50,7 @@ describe('UserEntity', () => {
 
       // Create first user
       const firstResult = await userEntity().create(input);
-      expect(firstResult.success).toBe(true);
+      expect(firstResult.ok).toBe(true);
 
       // Try to create duplicate
       const secondResult = await userEntity().create({
@@ -79,10 +79,10 @@ describe('UserEntity', () => {
 
       const result = await userEntity().findAll();
 
-      expect(result.success).toBe(true);
-      if (result.success) {
+      expect(result.ok).toBe(true);
+      if (result.ok) {
         // Check users are present (order might vary)
-        const emails = result.data.map((u) => u.email);
+        const emails = result.value.map((u) => u.email);
         expect(emails).toContain('user1@example.com');
         expect(emails).toContain('user2@example.com');
       }
@@ -91,17 +91,17 @@ describe('UserEntity', () => {
     it('should return empty array when no users exist', async () => {
       // Clear all users first
       const allUsers = await userEntity().findAll();
-      if (allUsers.success) {
-        for (const user of allUsers.data) {
+      if (allUsers.ok) {
+        for (const user of allUsers.value) {
           await userEntity().delete(user.id);
         }
       }
 
       const result = await userEntity().findAll();
 
-      expect(result.success).toBe(true);
-      if (result.success) {
-        expect(result.data).toEqual([]);
+      expect(result.ok).toBe(true);
+      if (result.ok) {
+        expect(result.value).toEqual([]);
       }
     });
   });
@@ -113,16 +113,16 @@ describe('UserEntity', () => {
         name: 'Find Me' as any,
       });
 
-      expect(createResult.success).toBe(true);
-      if (!createResult.success) return;
+      expect(createResult.ok).toBe(true);
+      if (!createResult.ok) return;
 
-      const result = await userEntity().findById(createResult.data.id);
+      const result = await userEntity().findById(createResult.value.id);
 
-      expect(result.success).toBe(true);
-      if (result.success) {
-        expect(result.data).not.toBeNull();
-        expect(result.data?.email).toBe('findme@example.com');
-        expect(result.data?.name).toBe('Find Me');
+      expect(result.ok).toBe(true);
+      if (result.ok) {
+        expect(result.value).not.toBeNull();
+        expect(result.value?.email).toBe('findme@example.com');
+        expect(result.value?.name).toBe('Find Me');
       }
     });
 
@@ -131,9 +131,9 @@ describe('UserEntity', () => {
         '550e8400-e29b-41d4-a716-446655440000' as any
       );
 
-      expect(result.success).toBe(true);
-      if (result.success) {
-        expect(result.data).toBeNull();
+      expect(result.ok).toBe(true);
+      if (result.ok) {
+        expect(result.value).toBeNull();
       }
     });
   });
@@ -145,24 +145,24 @@ describe('UserEntity', () => {
         name: 'Original Name' as any,
       });
 
-      expect(createResult.success).toBe(true);
-      if (!createResult.success) return;
+      expect(createResult.ok).toBe(true);
+      if (!createResult.ok) return;
 
       // Small delay to ensure updatedAt timestamp differs
       await new Promise((resolve) => {
         globalThis.setTimeout(resolve, 10);
       });
 
-      const updateResult = await userEntity().update(createResult.data.id, {
+      const updateResult = await userEntity().update(createResult.value.id, {
         name: 'Updated Name' as any,
       });
 
-      expect(updateResult.success).toBe(true);
-      if (updateResult.success && updateResult.data) {
-        expect(updateResult.data.email).toBe('update@example.com');
-        expect(updateResult.data.name).toBe('Updated Name');
-        expect(updateResult.data.updatedAt.getTime()).toBeGreaterThan(
-          createResult.data.updatedAt.getTime()
+      expect(updateResult.ok).toBe(true);
+      if (updateResult.ok && updateResult.value) {
+        expect(updateResult.value.email).toBe('update@example.com');
+        expect(updateResult.value.name).toBe('Updated Name');
+        expect(updateResult.value.updatedAt.getTime()).toBeGreaterThan(
+          createResult.value.updatedAt.getTime()
         );
       }
     });
@@ -173,9 +173,9 @@ describe('UserEntity', () => {
         { name: 'New Name' as any }
       );
 
-      expect(result.success).toBe(true);
-      if (result.success) {
-        expect(result.data).toBeNull();
+      expect(result.ok).toBe(true);
+      if (result.ok) {
+        expect(result.value).toBeNull();
       }
     });
   });
@@ -187,21 +187,21 @@ describe('UserEntity', () => {
         name: 'Delete Me' as any,
       });
 
-      expect(createResult.success).toBe(true);
-      if (!createResult.success) return;
+      expect(createResult.ok).toBe(true);
+      if (!createResult.ok) return;
 
-      const deleteResult = await userEntity().delete(createResult.data.id);
+      const deleteResult = await userEntity().delete(createResult.value.id);
 
-      expect(deleteResult.success).toBe(true);
-      if (deleteResult.success) {
-        expect(deleteResult.data).toBe(true);
+      expect(deleteResult.ok).toBe(true);
+      if (deleteResult.ok) {
+        expect(deleteResult.value).toBe(true);
       }
 
       // Verify user is soft deleted
-      const findResult = await userEntity().findById(createResult.data.id);
-      expect(findResult.success).toBe(true);
-      if (findResult.success) {
-        expect(findResult.data).toBeNull(); // Soft deleted users are not returned
+      const findResult = await userEntity().findById(createResult.value.id);
+      expect(findResult.ok).toBe(true);
+      if (findResult.ok) {
+        expect(findResult.value).toBeNull(); // Soft deleted users are not returned
       }
     });
 
@@ -210,9 +210,9 @@ describe('UserEntity', () => {
         '550e8400-e29b-41d4-a716-446655440000' as any
       );
 
-      expect(result.success).toBe(true);
-      if (result.success) {
-        expect(result.data).toBe(false);
+      expect(result.ok).toBe(true);
+      if (result.ok) {
+        expect(result.value).toBe(false);
       }
     });
   });

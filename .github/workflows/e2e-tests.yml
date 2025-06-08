@@ -28,6 +28,12 @@ jobs:
       - name: Install dependencies
         run: yarn install --frozen-lockfile
 
+      - name: Build result package
+        run: yarn workspace result build
+
+      - name: Refresh package links
+        run: yarn install --force
+
       - name: Install Playwright browsers
         run: npx playwright install --with-deps
 

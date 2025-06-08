@@ -1,7 +1,6 @@
 import { depend } from 'velona';
 import { eq, isNull, and } from 'drizzle-orm';
-import { ok, err } from '@fyuuki0jp/railway-result';
-import type { Result } from '@fyuuki0jp/railway-result';
+import { ok, err, type Result } from 'result';
 import {
   usersTable,
   userSelectSchema,
@@ -80,13 +79,13 @@ export const UserEntity = depend({ db: {} as DrizzleDb }, ({ db }) => ({
 
       // Generate UserId
       const idResult = createUserId();
-      if (!idResult.success) {
+      if (!idResult.ok) {
         return err(idResult.error);
       }
 
       const now = new Date();
       const userData = {
-        id: idResult.data,
+        id: idResult.value,
         email: validationResult.data.email,
         name: validationResult.data.name,
         createdAt: now,
@@ -116,11 +115,11 @@ export const UserEntity = depend({ db: {} as DrizzleDb }, ({ db }) => ({
         deletedAt: dbUser.deletedAt,
       });
 
-      if (!userResult.success) {
+      if (!userResult.ok) {
         return err(userResult.error);
       }
 
-      return ok(userResult.data);
+      return ok(userResult.value);
     } catch (error) {
       if (error instanceof Error) {
         if (
@@ -158,7 +157,7 @@ export const UserEntity = depend({ db: {} as DrizzleDb }, ({ db }) => ({
           deletedAt: dbUser.deletedAt,
         });
 
-        if (!userResult.success) {
+        if (!userResult.ok) {
           return err(
             new Error(
               `Invalid user data from database for id: ${dbUser.id} - ${userResult.error.message}`
@@ -166,7 +165,7 @@ export const UserEntity = depend({ db: {} as DrizzleDb }, ({ db }) => ({
           );
         }
 
-        users.push(userResult.data);
+        users.push(userResult.value);
       }
 
       return ok(users);
@@ -196,7 +195,7 @@ export const UserEntity = depend({ db: {} as DrizzleDb }, ({ db }) => ({
         deletedAt: dbUser.deletedAt,
       });
 
-      if (!userResult.success) {
+      if (!userResult.ok) {
         return err(
           new Error(
             `Invalid user data from database for id: ${dbUser.id} - ${userResult.error.message}`
@@ -204,7 +203,7 @@ export const UserEntity = depend({ db: {} as DrizzleDb }, ({ db }) => ({
         );
       }
 
-      return ok(userResult.data);
+      return ok(userResult.value);
     } catch (error) {
       return err(error as Error);
     }
@@ -245,11 +244,11 @@ export const UserEntity = depend({ db: {} as DrizzleDb }, ({ db }) => ({
         deletedAt: dbUser.deletedAt,
       });
 
-      if (!userResult.success) {
+      if (!userResult.ok) {
         return err(userResult.error);
       }
 
-      return ok(userResult.data);
+      return ok(userResult.value);
     } catch (error) {
       if (error instanceof Error) {
         if (

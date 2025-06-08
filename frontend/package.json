@@ -14,6 +14,7 @@
     "typecheck": "tsc --noEmit"
   },
   "dependencies": {
+    "result": "file:../packages/result",
     "@generouted/react-router": "^1.20.0",
     "@tanstack/react-query": "^5.79.0",
     "hono": "^4.7.10",
@@ -37,7 +38,6 @@
     "jsdom": "^26.1.0",
     "msw": "^2.8.7",
     "tailwindcss": "^4.1.8",
-    "vite": "^6.3.5",
-    "vitest": "^3.1.4"
+    "vite": "^6.3.5"
   }
 }
