@@ -1,5 +1,5 @@
 import { depend } from 'velona';
-import { isErr, type Result } from 'shared-result';
+import { isErr, type Result } from 'result';
 import {
   type User,
   UserEntity,

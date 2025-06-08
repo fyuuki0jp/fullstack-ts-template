@@ -1,4 +1,4 @@
-import type { Result } from 'shared-result';
+import type { Result } from 'result';
 
 export interface ExternalServiceAdapter {
   fetch<T>(

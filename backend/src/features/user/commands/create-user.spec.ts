@@ -1,6 +1,6 @@
 import { describe, it, expect, beforeAll, afterAll } from 'vitest';
 import { createUser } from './create-user';
-import { isErr } from 'shared-result';
+import { isErr } from 'result';
 import { setupTestDatabase } from '../../../shared/adapters/db/pglite';
 import type { PGlite } from '@electric-sql/pglite';
 import type { DrizzleDb } from '../../../shared/adapters/db/pglite';

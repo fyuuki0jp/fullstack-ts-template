@@ -1,6 +1,6 @@
 import { depend } from 'velona';
 import { eq, isNull, and } from 'drizzle-orm';
-import { ok, err, type Result } from 'shared-result';
+import { ok, err, type Result } from 'result';
 import {
   usersTable,
   userSelectSchema,

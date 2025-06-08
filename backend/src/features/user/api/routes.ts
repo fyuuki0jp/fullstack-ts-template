@@ -1,5 +1,5 @@
 import { Hono } from 'hono';
-import { isErr } from 'shared-result';
+import { isErr } from 'result';
 import { createUser } from '../commands/create-user';
 import { getUsers } from '../queries/get-users';
 import type { DrizzleDb } from '../../../shared/adapters/db/pglite';

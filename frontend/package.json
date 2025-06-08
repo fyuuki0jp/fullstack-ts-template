@@ -14,7 +14,7 @@
     "typecheck": "tsc --noEmit"
   },
   "dependencies": {
-    "shared-result": "file:../packages/result",
+    "result": "file:../packages/result",
     "@generouted/react-router": "^1.20.0",
     "@tanstack/react-query": "^5.79.0",
     "hono": "^4.7.10",
