@@ -1,5 +1,5 @@
 import { depend } from 'velona';
-import { isErr, type Result } from '@fullstack-ts-template/result';
+import { isErr, type Result } from '@shared/result';
 import {
   type User,
   UserEntity,

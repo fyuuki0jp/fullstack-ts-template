@@ -889,9 +889,6 @@
   dependencies:
     tslib "^2.8.0"
 
-"@fullstack-ts-template/result@file:packages/result":
-  version "1.0.0"
-
 "@generouted/react-router@^1.20.0":
   version "1.20.0"
   resolved "https://registry.yarnpkg.com/@generouted/react-router/-/react-router-1.20.0.tgz#03512fa8e44497fe41e6136661a62cda429f9ca6"
@@ -2373,6 +2370,9 @@
   version "4.41.1"
   resolved "https://registry.yarnpkg.com/@rollup/rollup-win32-x64-msvc/-/rollup-win32-x64-msvc-4.41.1.tgz#848f99b0d9936d92221bb6070baeff4db6947a30"
   integrity sha512-Wq2zpapRYLfi4aKxf2Xff0tN+7slj2d4R87WEzqw7ZLsVvO5zwYCIuEGSZYiK41+GlwUo1HiR+GdkLEJnCKTCw==
+
+"@shared/result@file:packages/result":
+  version "1.0.0"
 
 "@swc/helpers@^0.5.0":
   version "0.5.17"

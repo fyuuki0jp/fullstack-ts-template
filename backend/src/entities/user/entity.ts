@@ -1,6 +1,6 @@
 import { depend } from 'velona';
 import { eq, isNull, and } from 'drizzle-orm';
-import { ok, err, type Result } from '@fullstack-ts-template/result';
+import { ok, err, type Result } from '@shared/result';
 import {
   usersTable,
   userSelectSchema,

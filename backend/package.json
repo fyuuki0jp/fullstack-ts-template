@@ -22,7 +22,7 @@
   },
   "dependencies": {
     "@electric-sql/pglite": "^0.3.2",
-    "@fullstack-ts-template/result": "file:../packages/result",
+    "@shared/result": "file:../packages/result",
     "@hono/node-server": "^1.14.3",
     "better-sqlite3": "^11.10.0",
     "drizzle-kit": "^0.31.1",

@@ -1,5 +1,5 @@
 import { depend } from 'velona';
-import type { Result } from '@fullstack-ts-template/result';
+import type { Result } from '@shared/result';
 import { type User, UserEntity } from '../../../entities';
 import type { DrizzleDb } from '../../../shared/adapters/db/pglite';
 

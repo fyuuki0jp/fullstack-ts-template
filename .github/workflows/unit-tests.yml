@@ -28,7 +28,7 @@ jobs:
         run: yarn install --frozen-lockfile
 
       - name: Build packages
-        run: yarn workspace @fullstack-ts-template/result build
+        run: yarn workspace @shared/result build
 
       - name: Re-install to update symlinks
         run: yarn install --frozen-lockfile
