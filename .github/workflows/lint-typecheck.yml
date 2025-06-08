@@ -30,6 +30,9 @@ jobs:
       - name: Build shared-result package
         run: yarn workspace shared-result build
 
+      - name: Refresh package links
+        run: yarn install --force
+
       - name: Debug package installation
         run: |
           echo "=== Checking shared-result package installation ==="
