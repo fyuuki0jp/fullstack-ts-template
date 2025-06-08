@@ -27,6 +27,9 @@ jobs:
       - name: Install dependencies
         run: yarn install --frozen-lockfile
 
+      - name: Build packages
+        run: yarn workspace @fullstack-ts-template/result build
+
       - name: Run backend unit tests
         run: yarn workspace backend test
 
