@@ -8,11 +8,13 @@
   "types": "./dist/index.d.ts",
   "exports": {
     ".": {
+      "types": "./dist/index.d.ts",
       "import": "./dist/index.js",
-      "types": "./dist/index.d.ts"
+      "default": "./dist/index.js"
     },
     "./eslint-rules": {
-      "import": "./src/eslint-rules/index.js"
+      "import": "./src/eslint-rules/index.js",
+      "default": "./src/eslint-rules/index.js"
     }
   },
   "scripts": {
