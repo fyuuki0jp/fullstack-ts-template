@@ -35,8 +35,6 @@
   "devDependencies": {
     "@types/better-sqlite3": "^7.6.13",
     "@types/node": "^20.11.17",
-    "@vitest/coverage-v8": "^3.2.2",
-    "tsx": "^4.19.4",
-    "vitest": "^3.1.4"
+    "tsx": "^4.19.4"
   }
 }
