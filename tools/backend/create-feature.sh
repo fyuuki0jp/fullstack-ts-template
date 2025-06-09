@@ -66,13 +66,11 @@ if [ "$DRY_RUN" = true ]; then
     echo "  - $FEATURE_DIR/api"
     echo "  - $FEATURE_DIR/commands"
     echo "  - $FEATURE_DIR/queries"
-    echo "  - $FEATURE_DIR/domain"
     echo ""
 else
     mkdir -p "$FEATURE_DIR/api"
     mkdir -p "$FEATURE_DIR/commands"
     mkdir -p "$FEATURE_DIR/queries"
-    mkdir -p "$FEATURE_DIR/domain"
 fi
 
 # Check if entity exists (check for entity directory structure)
@@ -91,102 +89,26 @@ else
     echo "✅ Entity '${ENTITY_NAME}' already exists. Using existing entity..."
 fi
 
-# Create repository interface
-create_file "$FEATURE_DIR/domain/repository.ts" "\
-import type { Result } from '@fyuuki0jp/railway-result';
-import type { ${PASCAL_CASE_NAME}, Create${PASCAL_CASE_NAME}Input, ${PASCAL_CASE_NAME}Id } from '../../../entities/${ENTITY_NAME}';
-
-export interface ${PASCAL_CASE_NAME}Repository {
-  create(input: Create${PASCAL_CASE_NAME}Input): Promise<Result<${PASCAL_CASE_NAME}, Error>>;
-  findAll(): Promise<Result<${PASCAL_CASE_NAME}[], Error>>;
-  findById(id: ${PASCAL_CASE_NAME}Id): Promise<Result<${PASCAL_CASE_NAME} | null, Error>>;
-}
-"
-
-# Create repository implementation
-create_file "$FEATURE_DIR/domain/${ENTITY_NAME}-repository-impl.ts" "\
-import { depend } from 'velona';
-import { ok, err, isErr } from '@fyuuki0jp/railway-result';
-import type { Result } from '@fyuuki0jp/railway-result';
-import type { DbAdapter } from '../../../shared/adapters/db';
-import {
-  type ${PASCAL_CASE_NAME},
-  type Create${PASCAL_CASE_NAME}Input,
-  type ${PASCAL_CASE_NAME}Id,
-  validate${PASCAL_CASE_NAME},
-  create${PASCAL_CASE_NAME}Id,
-} from '../../../entities/${ENTITY_NAME}';
-
-// TODO: Implement repository methods according to your entity schema
-export const ${ENTITY_NAME}RepositoryImpl = depend({ db: {} as DbAdapter }, ({ db }) => ({
-  async create(input: Create${PASCAL_CASE_NAME}Input): Promise<Result<${PASCAL_CASE_NAME}, Error>> {
-    // TODO: Generate ID for new entity
-    const idResult = create${PASCAL_CASE_NAME}Id();
-    if (isErr(idResult)) {
-      return idResult;
-    }
-
-    // TODO: Create entity data based on your schema
-    // Example:
-    // const entityData: ${PASCAL_CASE_NAME} = {
-    //   id: idResult.data,
-    //   // Add your domain fields here
-    //   createdAt: new Date(),
-    //   updatedAt: new Date(),
-    //   deletedAt: null,
-    // };
-
-    // TODO: Execute INSERT query with your table columns
-    // Example:
-    // const result = await db.execute(
-    //   'INSERT INTO ${ENTITY_NAME}s (id, field1, field2, created_at, updated_at) VALUES (?, ?, ?, ?, ?)',
-    //   [entityData.id, entityData.field1, entityData.field2, entityData.createdAt.toISOString(), entityData.updatedAt.toISOString()]
-    // );
-
-    // TODO: Return created entity or error
-    throw new Error('TODO: Implement create method according to your entity schema');
-  },
-
-  async findAll(): Promise<Result<${PASCAL_CASE_NAME}[], Error>> {
-    // TODO: Execute SELECT query with your table columns
-    // Example:
-    // const result = await db.query<{
-    //   id: string;
-    //   field1: string;
-    //   field2: string | null;
-    //   created_at: string;
-    //   updated_at: string;
-    //   deleted_at: string | null;
-    // }>('SELECT id, field1, field2, created_at, updated_at, deleted_at FROM ${ENTITY_NAME}s WHERE deleted_at IS NULL');
-
-    // TODO: Transform database rows to domain objects
-    // Use validate${PASCAL_CASE_NAME}() to ensure data integrity
-
-    throw new Error('TODO: Implement findAll method according to your entity schema');
-  },
-
-  async findById(id: ${PASCAL_CASE_NAME}Id): Promise<Result<${PASCAL_CASE_NAME} | null, Error>> {
-    // TODO: Execute SELECT query by ID
-    // TODO: Return null if not found, entity if found, error if database error
-    // Use validate${PASCAL_CASE_NAME}() to ensure data integrity
-
-    throw new Error('TODO: Implement findById method according to your entity schema');
-  },
-}));
-"
+# Note: Repository pattern is not used in current implementation
+# Entities are used directly through dependency injection
+# The domain directory can be used for shared business logic if needed
 
 # Create command
 create_file "$FEATURE_DIR/commands/create-${ENTITY_NAME}.ts" "\
 import { depend } from 'velona';
-import { isErr } from '@fyuuki0jp/railway-result';
-import type { Result } from '@fyuuki0jp/railway-result';
-import { type ${PASCAL_CASE_NAME}, validateCreate${PASCAL_CASE_NAME}Input } from '../../../entities/${ENTITY_NAME}';
-import type { ${PASCAL_CASE_NAME}Repository } from '../domain/repository';
+import { isErr } from 'result';
+import type { Result } from 'result';
+import {
+  type ${PASCAL_CASE_NAME},
+  ${PASCAL_CASE_NAME}Entity,
+  validateCreate${PASCAL_CASE_NAME}Input,
+} from '../../../entities/${ENTITY_NAME}';
+import type { DrizzleDb } from '../../../shared/adapters/db/pglite';
 
 // TODO: Implement create command according to your domain requirements
 export const create${PASCAL_CASE_NAME} = depend(
-  { ${ENTITY_NAME}Repository: {} as ${PASCAL_CASE_NAME}Repository },
-  ({ ${ENTITY_NAME}Repository }) =>
+  { db: {} as DrizzleDb },
+  ({ db }) =>
     async (input: unknown): Promise<Result<${PASCAL_CASE_NAME}, Error>> => {
       // TODO: Validate input using domain helper
       const validationResult = validateCreate${PASCAL_CASE_NAME}Input(input);
@@ -194,13 +116,14 @@ export const create${PASCAL_CASE_NAME} = depend(
         return validationResult;
       }
 
-      const validatedInput = validationResult.data;
+      const validatedInput = validationResult.value;
 
       // TODO: Add additional business logic validation if needed
       // Example: Check business rules, permissions, etc.
 
-      // TODO: Create entity using repository
-      return ${ENTITY_NAME}Repository.create(validatedInput);
+      // Create entity using entity
+      const ${ENTITY_NAME}Entity = ${PASCAL_CASE_NAME}Entity.inject({ db })();
+      return ${ENTITY_NAME}Entity.create(validatedInput);
     }
 );
 "
@@ -208,18 +131,19 @@ export const create${PASCAL_CASE_NAME} = depend(
 # Create query
 create_file "$FEATURE_DIR/queries/get-${ENTITY_NAME}s.ts" "\
 import { depend } from 'velona';
-import type { Result } from '@fyuuki0jp/railway-result';
-import type { ${PASCAL_CASE_NAME} } from '../../../entities/${ENTITY_NAME}';
-import type { ${PASCAL_CASE_NAME}Repository } from '../domain/repository';
+import type { Result } from 'result';
+import { type ${PASCAL_CASE_NAME}, ${PASCAL_CASE_NAME}Entity } from '../../../entities/${ENTITY_NAME}';
+import type { DrizzleDb } from '../../../shared/adapters/db/pglite';
 
 // TODO: Implement query to get all entities
 export const get${PASCAL_CASE_NAME}s = depend(
-  { ${ENTITY_NAME}Repository: {} as ${PASCAL_CASE_NAME}Repository },
-  ({ ${ENTITY_NAME}Repository }) => async (): Promise<Result<${PASCAL_CASE_NAME}[], Error>> => {
+  { db: {} as DrizzleDb },
+  ({ db }) => async (): Promise<Result<${PASCAL_CASE_NAME}[], Error>> => {
     // TODO: Add business logic if needed (filtering, sorting, etc.)
     // TODO: Add authorization checks if needed
 
-    return ${ENTITY_NAME}Repository.findAll();
+    const ${ENTITY_NAME}Entity = ${PASCAL_CASE_NAME}Entity.inject({ db })();
+    return ${ENTITY_NAME}Entity.findAll();
   }
 );
 "
@@ -227,15 +151,15 @@ export const get${PASCAL_CASE_NAME}s = depend(
 # Create get by ID query
 create_file "$FEATURE_DIR/queries/get-${ENTITY_NAME}-by-id.ts" "\
 import { depend } from 'velona';
-import { err } from '@fyuuki0jp/railway-result';
-import type { Result } from '@fyuuki0jp/railway-result';
-import { type ${PASCAL_CASE_NAME}, ${PASCAL_CASE_NAME}IdSchema } from '../../../entities/${ENTITY_NAME}';
-import type { ${PASCAL_CASE_NAME}Repository } from '../domain/repository';
+import { err } from 'result';
+import type { Result } from 'result';
+import { type ${PASCAL_CASE_NAME}, ${PASCAL_CASE_NAME}Entity, ${PASCAL_CASE_NAME}IdSchema } from '../../../entities/${ENTITY_NAME}';
+import type { DrizzleDb } from '../../../shared/adapters/db/pglite';
 
 // TODO: Implement query to get entity by ID
 export const get${PASCAL_CASE_NAME}ById = depend(
-  { ${ENTITY_NAME}Repository: {} as ${PASCAL_CASE_NAME}Repository },
-  ({ ${ENTITY_NAME}Repository }) =>
+  { db: {} as DrizzleDb },
+  ({ db }) =>
     async (id: unknown): Promise<Result<${PASCAL_CASE_NAME} | null, Error>> => {
       // TODO: Validate ID format
       const idValidation = ${PASCAL_CASE_NAME}IdSchema.safeParse(id);
@@ -246,7 +170,8 @@ export const get${PASCAL_CASE_NAME}ById = depend(
       // TODO: Add authorization checks if needed
       // TODO: Add business logic if needed
 
-      return ${ENTITY_NAME}Repository.findById(idValidation.data);
+      const ${ENTITY_NAME}Entity = ${PASCAL_CASE_NAME}Entity.inject({ db })();
+      return ${ENTITY_NAME}Entity.findById(idValidation.data);
     }
 );
 "
@@ -254,19 +179,17 @@ export const get${PASCAL_CASE_NAME}ById = depend(
 # Create API routes
 create_file "$FEATURE_DIR/api/routes.ts" "\
 import { Hono } from 'hono';
-import { isErr } from '@fyuuki0jp/railway-result';
+import { isErr } from 'result';
 import { create${PASCAL_CASE_NAME} } from '../commands/create-${ENTITY_NAME}';
 import { get${PASCAL_CASE_NAME}s } from '../queries/get-${ENTITY_NAME}s';
 import { get${PASCAL_CASE_NAME}ById } from '../queries/get-${ENTITY_NAME}-by-id';
-import { ${ENTITY_NAME}RepositoryImpl } from '../domain/${ENTITY_NAME}-repository-impl';
-import type { DbAdapter } from '../../../shared/adapters/db';
+import type { DrizzleDb } from '../../../shared/adapters/db/pglite';
 
-export default (db: DbAdapter) => {
+export default (db: DrizzleDb) => {
   return new Hono()
     .get('/', async (c) => {
       // Dependency injection
-      const ${ENTITY_NAME}Repository = ${ENTITY_NAME}RepositoryImpl.inject({ db })();
-      const get${PASCAL_CASE_NAME}sUseCase = get${PASCAL_CASE_NAME}s.inject({ ${ENTITY_NAME}Repository })();
+      const get${PASCAL_CASE_NAME}sUseCase = get${PASCAL_CASE_NAME}s.inject({ db })();
 
       // Execute use case
       const result = await get${PASCAL_CASE_NAME}sUseCase();
@@ -277,7 +200,7 @@ export default (db: DbAdapter) => {
       }
 
       // Return success response
-      return c.json({ ${ENTITY_NAME}s: result.data });
+      return c.json({ ${ENTITY_NAME}s: result.value });
     })
     .post('/', async (c) => {
       // Parse request body with error handling
@@ -289,8 +212,7 @@ export default (db: DbAdapter) => {
       }
 
       // Dependency injection
-      const ${ENTITY_NAME}Repository = ${ENTITY_NAME}RepositoryImpl.inject({ db })();
-      const create${PASCAL_CASE_NAME}UseCase = create${PASCAL_CASE_NAME}.inject({ ${ENTITY_NAME}Repository })();
+      const create${PASCAL_CASE_NAME}UseCase = create${PASCAL_CASE_NAME}.inject({ db })();
 
       // Execute use case
       const result = await create${PASCAL_CASE_NAME}UseCase(body);
@@ -302,14 +224,13 @@ export default (db: DbAdapter) => {
       }
 
       // Return 201 Created for successful creation
-      return c.json({ ${ENTITY_NAME}: result.data }, 201);
+      return c.json({ ${ENTITY_NAME}: result.value }, 201);
     })
     .get('/:id', async (c) => {
       const id = c.req.param('id');
 
       // Dependency injection
-      const ${ENTITY_NAME}Repository = ${ENTITY_NAME}RepositoryImpl.inject({ db })();
-      const get${PASCAL_CASE_NAME}ByIdUseCase = get${PASCAL_CASE_NAME}ById.inject({ ${ENTITY_NAME}Repository })();
+      const get${PASCAL_CASE_NAME}ByIdUseCase = get${PASCAL_CASE_NAME}ById.inject({ db })();
 
       // Execute use case
       const result = await get${PASCAL_CASE_NAME}ByIdUseCase(id);
@@ -323,12 +244,12 @@ export default (db: DbAdapter) => {
       }
 
       // Handle not found
-      if (result.data === null) {
+      if (result.value === null) {
         return c.json({ error: '${PASCAL_CASE_NAME} not found' }, 404);
       }
 
       // Return success response
-      return c.json({ ${ENTITY_NAME}: result.data });
+      return c.json({ ${ENTITY_NAME}: result.value });
     });
 };
 
@@ -347,23 +268,28 @@ function determineStatusCode(errorMessage: string): number {
 
 # Create command test
 create_file "$FEATURE_DIR/commands/create-${ENTITY_NAME}.spec.ts" "\
-import { describe, it, expect, beforeEach, vi } from 'vitest';
+import { describe, it, expect, beforeAll, afterAll } from 'vitest';
 import { create${PASCAL_CASE_NAME} } from './create-${ENTITY_NAME}';
-import { isErr, ok, err } from '@fyuuki0jp/railway-result';
-import type { ${PASCAL_CASE_NAME}Repository } from '../domain/repository';
+import { isErr } from 'result';
 import type { ${PASCAL_CASE_NAME} } from '../../../entities/${ENTITY_NAME}';
+import { setupTestDatabase } from '../../../shared/adapters/db/pglite';
+import type { PGlite } from '@electric-sql/pglite';
+import type { DrizzleDb } from '../../../shared/adapters/db/pglite';
 
 describe('create${PASCAL_CASE_NAME} command', () => {
-  let mock${PASCAL_CASE_NAME}Repo: ${PASCAL_CASE_NAME}Repository;
+  let client: PGlite;
+  let db: DrizzleDb;
   let create${PASCAL_CASE_NAME}Cmd: ReturnType<typeof create${PASCAL_CASE_NAME}.inject>;
 
-  beforeEach(() => {
-    mock${PASCAL_CASE_NAME}Repo = {
-      create: vi.fn(),
-      findAll: vi.fn(),
-      findById: vi.fn(),
-    };
-    create${PASCAL_CASE_NAME}Cmd = create${PASCAL_CASE_NAME}.inject({ ${ENTITY_NAME}Repository: mock${PASCAL_CASE_NAME}Repo });
+  beforeAll(async () => {
+    const setup = await setupTestDatabase();
+    client = setup.client;
+    db = setup.db;
+    create${PASCAL_CASE_NAME}Cmd = create${PASCAL_CASE_NAME}.inject({ db });
+  });
+
+  afterAll(async () => {
+    await client.close();
   });
 
   it('should create a ${ENTITY_NAME} with valid input', async () => {
@@ -381,15 +307,16 @@ describe('create${PASCAL_CASE_NAME} command', () => {
       deletedAt: null,
     };
 
-    vi.mocked(mock${PASCAL_CASE_NAME}Repo.create).mockResolvedValue(ok(created${PASCAL_CASE_NAME}));
-
     const result = await create${PASCAL_CASE_NAME}Cmd()(input);
 
-    expect(result.success).toBe(true);
-    if (result.success) {
-      expect(result.data).toEqual(created${PASCAL_CASE_NAME});
+    expect(result.ok).toBe(true);
+    if (result.ok) {
+      expect(result.value.id).toBeTruthy();
+      // TODO: Add assertions for your domain fields
+      expect(result.value.createdAt).toBeInstanceOf(Date);
+      expect(result.value.updatedAt).toBeInstanceOf(Date);
+      expect(result.value.deletedAt).toBeNull();
     }
-    expect(mock${PASCAL_CASE_NAME}Repo.create).toHaveBeenCalledWith(input);
   });
 
   // TODO: Add validation tests based on your domain schema
@@ -405,7 +332,7 @@ describe('create${PASCAL_CASE_NAME} command', () => {
       // TODO: Update error message to match your validation
       expect(result.error.message).toContain('validation failed');
     }
-    expect(mock${PASCAL_CASE_NAME}Repo.create).not.toHaveBeenCalled();
+    // TODO: Add database verification if needed
   });
 
   // TODO: Add specific field validation tests
@@ -421,7 +348,7 @@ describe('create${PASCAL_CASE_NAME} command', () => {
       // TODO: Update error message to match your validation
       expect(result.error.message).toContain('validation failed');
     }
-    expect(mock${PASCAL_CASE_NAME}Repo.create).not.toHaveBeenCalled();
+    // TODO: Add database verification if needed
   });
 
   // TODO: Add additional validation tests for your domain
@@ -437,7 +364,7 @@ describe('create${PASCAL_CASE_NAME} command', () => {
       // TODO: Update error message to match your validation
       expect(result.error.message).toContain('validation failed');
     }
-    expect(mock${PASCAL_CASE_NAME}Repo.create).not.toHaveBeenCalled();
+    // TODO: Add database verification if needed
   });
 
   it('should handle repository errors', async () => {
@@ -446,15 +373,16 @@ describe('create${PASCAL_CASE_NAME} command', () => {
       // TODO: Add valid field values
     };
 
-    vi.mocked(mock${PASCAL_CASE_NAME}Repo.create).mockResolvedValue(
-      err(new Error('Database error'))
-    );
+    // Simulate database error by using invalid input that causes DB constraint violation
+    // TODO: Implement test case based on your entity constraints
+    // For example, duplicate unique field values
 
     const result = await create${PASCAL_CASE_NAME}Cmd()(input);
 
     expect(isErr(result)).toBe(true);
     if (isErr(result)) {
-      expect(result.error.message).toBe('Database error');
+      // TODO: Update error message to match your domain constraints
+      expect(result.error.message).toContain('error');
     }
   });
 
@@ -471,83 +399,87 @@ describe('create${PASCAL_CASE_NAME} command', () => {
       // TODO: Update error message to match your validation
       expect(result.error.message).toContain('Expected');
     }
-    expect(mock${PASCAL_CASE_NAME}Repo.create).not.toHaveBeenCalled();
+    // TODO: Add database verification if needed
   });
 });
 "
 
 # Create query test
 create_file "$FEATURE_DIR/queries/get-${ENTITY_NAME}s.spec.ts" "\
-import { describe, it, expect, beforeEach, vi } from 'vitest';
+import { describe, it, expect, beforeAll, afterAll } from 'vitest';
 import { get${PASCAL_CASE_NAME}s } from './get-${ENTITY_NAME}s';
-import { isErr, ok, err } from '@fyuuki0jp/railway-result';
-import type { ${PASCAL_CASE_NAME}Repository } from '../domain/repository';
+import { create${PASCAL_CASE_NAME} } from '../commands/create-${ENTITY_NAME}';
+import { isErr } from 'result';
+import { setupTestDatabase } from '../../../shared/adapters/db/pglite';
+import type { PGlite } from '@electric-sql/pglite';
+import type { DrizzleDb } from '../../../shared/adapters/db/pglite';
 
 describe('get${PASCAL_CASE_NAME}s query', () => {
-  let mock${PASCAL_CASE_NAME}Repo: ${PASCAL_CASE_NAME}Repository;
+  let client: PGlite;
+  let db: DrizzleDb;
   let get${PASCAL_CASE_NAME}sQuery: ReturnType<typeof get${PASCAL_CASE_NAME}s.inject>;
+  let create${PASCAL_CASE_NAME}Cmd: ReturnType<typeof create${PASCAL_CASE_NAME}.inject>;
 
-  beforeEach(() => {
-    mock${PASCAL_CASE_NAME}Repo = {
-      create: vi.fn(),
-      findAll: vi.fn(),
-      findById: vi.fn(),
-    };
-    get${PASCAL_CASE_NAME}sQuery = get${PASCAL_CASE_NAME}s.inject({ ${ENTITY_NAME}Repository: mock${PASCAL_CASE_NAME}Repo });
+  beforeAll(async () => {
+    const setup = await setupTestDatabase();
+    client = setup.client;
+    db = setup.db;
+    get${PASCAL_CASE_NAME}sQuery = get${PASCAL_CASE_NAME}s.inject({ db });
+    create${PASCAL_CASE_NAME}Cmd = create${PASCAL_CASE_NAME}.inject({ db });
+  });
+
+  afterAll(async () => {
+    await client.close();
   });
 
   it('should return all ${ENTITY_NAME}s', async () => {
-    // TODO: Create mock entities according to your schema
-    const mock${PASCAL_CASE_NAME}s = [
-      {
-        id: '550e8400-e29b-41d4-a716-446655440001',
-        // TODO: Add your domain fields here
-        createdAt: new Date(),
-        updatedAt: new Date(),
-        deletedAt: null,
-      },
-      {
-        id: '550e8400-e29b-41d4-a716-446655440002',
-        // TODO: Add your domain fields here
-        createdAt: new Date(),
-        updatedAt: new Date(),
-        deletedAt: null,
-      },
-    ];
+    // Create test entities in database
+    const input1 = {
+      // TODO: Add your domain-specific input fields
+    };
+    const input2 = {
+      // TODO: Add your domain-specific input fields
+    };
 
-    vi.mocked(mock${PASCAL_CASE_NAME}Repo.findAll).mockResolvedValue(ok(mock${PASCAL_CASE_NAME}s));
+    await create${PASCAL_CASE_NAME}Cmd()(input1);
+    await create${PASCAL_CASE_NAME}Cmd()(input2);
 
     const result = await get${PASCAL_CASE_NAME}sQuery()();
 
-    expect(result.success).toBe(true);
-    if (result.success) {
-      expect(result.data).toEqual(mock${PASCAL_CASE_NAME}s);
-      expect(result.data).toHaveLength(2);
+    expect(result.ok).toBe(true);
+    if (result.ok) {
+      expect(result.value).toHaveLength(2);
+      // TODO: Add assertions for your domain fields
+      expect(result.value[0].id).toBeTruthy();
+      expect(result.value[1].id).toBeTruthy();
     }
   });
 
   it('should return empty array when no ${ENTITY_NAME}s exist', async () => {
-    vi.mocked(mock${PASCAL_CASE_NAME}Repo.findAll).mockResolvedValue(ok([]));
-
     const result = await get${PASCAL_CASE_NAME}sQuery()();
 
-    expect(result.success).toBe(true);
-    if (result.success) {
-      expect(result.data).toEqual([]);
+    expect(result.ok).toBe(true);
+    if (result.ok) {
+      expect(result.value).toEqual([]);
     }
   });
 
-  it('should handle repository errors', async () => {
-    vi.mocked(mock${PASCAL_CASE_NAME}Repo.findAll).mockResolvedValue(
-      err(new Error('Database connection failed'))
-    );
+  it('should handle database errors', async () => {
+    // Simulate database error by closing the database connection
+    await client.close();
 
     const result = await get${PASCAL_CASE_NAME}sQuery()();
 
     expect(isErr(result)).toBe(true);
     if (isErr(result)) {
-      expect(result.error.message).toBe('Database connection failed');
+      expect(result.error.message).toBeTruthy();
     }
+
+    // Reconnect for other tests
+    const setup = await setupTestDatabase();
+    client = setup.client;
+    db = setup.db;
+    get${PASCAL_CASE_NAME}sQuery = get${PASCAL_CASE_NAME}s.inject({ db });
   });
 });
 "
@@ -742,15 +674,12 @@ fi
 if [ "$DRY_RUN" = true ]; then
     echo "✅ DRY RUN completed for backend feature '${FEATURE_NAME}'"
     echo "📁 Would create files:"
-    echo "   - Repository interface and implementation"
-    echo "   - Commands and queries with tests"
+    echo "   - Commands and queries with integration tests"
     echo "   - API routes with tests"
-    echo "   - All files using zod + branded types + Railway Result pattern"
+    echo "   - All files using Entity pattern + Drizzle + Railway Result pattern"
 else
     echo "✅ Backend feature '${FEATURE_NAME}' created successfully!"
     echo "📁 Created files:"
-    echo "   - $FEATURE_DIR/domain/repository.ts"
-    echo "   - $FEATURE_DIR/domain/${ENTITY_NAME}-repository-impl.ts"
     echo "   - $FEATURE_DIR/commands/create-${ENTITY_NAME}.ts"
     echo "   - $FEATURE_DIR/commands/create-${ENTITY_NAME}.spec.ts"
     echo "   - $FEATURE_DIR/queries/get-${ENTITY_NAME}s.ts"
@@ -763,12 +692,12 @@ fi
 echo ""
 echo "Next steps:"
 echo "1. Implement domain-specific logic by replacing TODO comments"
-echo "2. Create decision tables using MCP tools:"
+echo "2. Update your entity schema in entities/${ENTITY_NAME}/schema.ts if needed"
+echo "3. Create decision tables using MCP tools:"
 echo "   - mcp__testing-mcp__create_decision_table for test scenarios"
 echo "   - mcp__testing-mcp__generate_tests to generate test code"
-echo "3. Replace generic test templates with generated MCP tests"
-echo "4. Add the feature routes to your main server.ts:"
+echo "4. Replace generic test templates with generated MCP tests"
+echo "5. Add the feature routes to your main server.ts:"
 echo "   import create${PASCAL_CASE_NAME}Routes from './features/${FEATURE_NAME}/api/routes';"
 echo "   app.route('/${ENTITY_NAME}s', create${PASCAL_CASE_NAME}Routes(db));"
-echo "5. Ensure database table structure matches your entity schema"
 echo "6. Run tests: yarn test src/features/${FEATURE_NAME}/"

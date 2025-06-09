@@ -107,8 +107,7 @@ if [ "$DRY_RUN" = true ]; then
     echo "Would create file: $ENTITY_DIR/entity.ts"
 else
     cat > "$ENTITY_DIR/entity.ts" << 'EOF'
-import { ok, err } from '@fyuuki0jp/railway-result';
-import type { Result } from '@fyuuki0jp/railway-result';
+import { ok, err, type Result } from 'result';
 import {
   ${PASCAL_CASE_NAME}Id,
   ${PASCAL_CASE_NAME}IdSchema,
@@ -142,8 +141,8 @@ export {
 export const validate${PASCAL_CASE_NAME} = (data: unknown): Result<${PASCAL_CASE_NAME}, Error> => {
   const result = ${ENTITY_NAME}SelectSchema.safeParse(data);
   if (!result.success) {
-    const errorMessage = result.error.errors
-      .map((error) => error.message)
+    const errorMessage = result.error.issues
+      .map((issue) => issue.message)
       .join(', ');
     return err(new Error(`${PASCAL_CASE_NAME} validation failed: ${errorMessage}`));
   }
@@ -155,8 +154,8 @@ export const validateCreate${PASCAL_CASE_NAME}Input = (
 ): Result<Create${PASCAL_CASE_NAME}Input, Error> => {
   const result = ${ENTITY_NAME}InsertSchema.safeParse(data);
   if (!result.success) {
-    const errorMessage = result.error.errors
-      .map((error) => error.message)
+    const errorMessage = result.error.issues
+      .map((issue) => issue.message)
       .join(', ');
     return err(
       new Error(`Create ${PASCAL_CASE_NAME} input validation failed: ${errorMessage}`)
@@ -170,8 +169,8 @@ export const validateUpdate${PASCAL_CASE_NAME}Input = (
 ): Result<Update${PASCAL_CASE_NAME}Input, Error> => {
   const result = ${ENTITY_NAME}UpdateSchema.safeParse(data);
   if (!result.success) {
-    const errorMessage = result.error.errors
-      .map((error) => error.message)
+    const errorMessage = result.error.issues
+      .map((issue) => issue.message)
       .join(', ');
     return err(
       new Error(`Update ${PASCAL_CASE_NAME} input validation failed: ${errorMessage}`)
@@ -205,8 +204,12 @@ if [ "$DRY_RUN" = true ]; then
     echo ""
 else
     cat > "$ENTITY_DIR/entity.spec.ts" << 'EOF'
-import { describe, it, expect } from 'vitest';
-import { isErr } from '@fyuuki0jp/railway-result';
+import { describe, it, expect, beforeAll, afterAll } from 'vitest';
+import { isErr } from 'result';
+import type { PGlite } from '@electric-sql/pglite';
+import { setupTestDatabase } from '@/shared/adapters/db/pglite';
+import type { DrizzleDb } from '@/shared/adapters/db';
+import { ${ENTITY_NAME}sTable } from './schema';
 import {
   type ${PASCAL_CASE_NAME},
   type Create${PASCAL_CASE_NAME}Input,
@@ -223,6 +226,19 @@ import {
 // 3. Add the generated tests to this file
 
 describe('${PASCAL_CASE_NAME} Entity', () => {
+  let client: PGlite;
+  let db: DrizzleDb;
+
+  beforeAll(async () => {
+    const setup = await setupTestDatabase();
+    client = setup.client;
+    db = setup.db;
+  });
+
+  afterAll(async () => {
+    await client.close();
+  });
+
   describe('validate${PASCAL_CASE_NAME}', () => {
     // TODO: Add test cases based on your domain schema
     it('should validate a correct ${ENTITY_NAME}', () => {
@@ -236,13 +252,13 @@ describe('${PASCAL_CASE_NAME} Entity', () => {
 
       const result = validate${PASCAL_CASE_NAME}(${ENTITY_NAME}Data);
 
-      expect(result.success).toBe(true);
-      if (result.success) {
-        expect(result.data.id).toBe('550e8400-e29b-41d4-a716-446655440001');
+      expect(result.ok).toBe(true);
+      if (result.ok) {
+        expect(result.value.id).toBe('550e8400-e29b-41d4-a716-446655440001');
         // TODO: Add assertions for your domain fields
-        expect(result.data.createdAt).toBeInstanceOf(Date);
-        expect(result.data.updatedAt).toBeInstanceOf(Date);
-        expect(result.data.deletedAt).toBeNull();
+        expect(result.value.createdAt).toBeInstanceOf(Date);
+        expect(result.value.updatedAt).toBeInstanceOf(Date);
+        expect(result.value.deletedAt).toBeNull();
       }
     });
 
@@ -252,7 +268,7 @@ describe('${PASCAL_CASE_NAME} Entity', () => {
         // TODO: Add invalid domain field values
       };
 
-      const result = validate${PASCAL_CASE_NAME}(invalid${PASCAL_CASE_NAME}Data);
+      const result = validate${PASCAL_CASE_NAME}(invalid${ENTITY_NAME}Data);
 
       expect(isErr(result)).toBe(true);
       if (isErr(result)) {
@@ -272,7 +288,7 @@ describe('${PASCAL_CASE_NAME} Entity', () => {
 
       const result = validateCreate${PASCAL_CASE_NAME}Input(input);
 
-      expect(result.success).toBe(true);
+      expect(result.ok).toBe(true);
       // TODO: Add assertions for your domain fields
     });
 
@@ -301,7 +317,7 @@ describe('${PASCAL_CASE_NAME} Entity', () => {
 
       const result = validateUpdate${PASCAL_CASE_NAME}Input(input);
 
-      expect(result.success).toBe(true);
+      expect(result.ok).toBe(true);
     });
 
     it('should validate empty update input', () => {
@@ -309,7 +325,7 @@ describe('${PASCAL_CASE_NAME} Entity', () => {
 
       const result = validateUpdate${PASCAL_CASE_NAME}Input(input);
 
-      expect(result.success).toBe(true);
+      expect(result.ok).toBe(true);
     });
   });
 
@@ -317,11 +333,32 @@ describe('${PASCAL_CASE_NAME} Entity', () => {
     it('should generate a valid ${PASCAL_CASE_NAME}Id', () => {
       const result = create${PASCAL_CASE_NAME}Id();
 
-      expect(result.success).toBe(true);
-      if (result.success) {
-        expect(typeof result.data).toBe('string');
-        expect(result.data).toMatch(/^[0-9a-f]{8}-[0-9a-f]{4}-4[0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i);
+      expect(result.ok).toBe(true);
+      if (result.ok) {
+        expect(typeof result.value).toBe('string');
+        expect(result.value).toMatch(/^[0-9a-f]{8}-[0-9a-f]{4}-4[0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i);
       }
+    });
+  });
+
+  // TODO: Add domain repository tests here
+  describe('${PASCAL_CASE_NAME} Repository Operations', () => {
+    // Example test structure for when you implement repository operations
+    it.skip('should create a new ${ENTITY_NAME} in database', async () => {
+      // TODO: Implement when you add repository operations
+      // const input: Create${PASCAL_CASE_NAME}Input = {
+      //   // Add fields
+      // };
+      // const result = await create${PASCAL_CASE_NAME}(db, input);
+      // expect(result.ok).toBe(true);
+    });
+
+    it.skip('should update an existing ${ENTITY_NAME}', async () => {
+      // TODO: Implement when you add repository operations
+    });
+
+    it.skip('should delete a ${ENTITY_NAME}', async () => {
+      // TODO: Implement when you add repository operations
     });
   });
 

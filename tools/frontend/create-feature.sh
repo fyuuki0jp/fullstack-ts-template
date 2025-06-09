@@ -144,10 +144,10 @@ export const validateCreate${PASCAL_CASE_NAME}InputWithErrors = (data: unknown) 
     return { success: true, data: result.data, errors: null };
   }
 
-  const errors = result.error.errors.reduce(
-    (acc, error) => {
-      const field = error.path[0] as keyof BackendCreate${PASCAL_CASE_NAME}Input;
-      acc[field] = error.message;
+  const errors = result.error.issues.reduce(
+    (acc, issue) => {
+      const field = issue.path[0] as keyof BackendCreate${PASCAL_CASE_NAME}Input;
+      acc[field] = issue.message;
       return acc;
     },
     {} as Record<keyof BackendCreate${PASCAL_CASE_NAME}Input, string>
