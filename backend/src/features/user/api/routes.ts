@@ -1,5 +1,5 @@
 import { Hono } from 'hono';
-import { isErr } from '@fyuuki0jp/railway-result';
+import { isErr } from 'result';
 import { createUser } from '../commands/create-user';
 import { getUsers } from '../queries/get-users';
 import type { DrizzleDb } from '../../../shared/adapters/db/pglite';
@@ -14,7 +14,7 @@ export default (db: DrizzleDb) => {
         return c.json({ error: result.error.message }, 500);
       }
 
-      return c.json({ users: result.data });
+      return c.json({ users: result.value });
     })
     .post('/', async (c) => {
       const createUserUseCase = createUser.inject({ db })();
@@ -41,6 +41,6 @@ export default (db: DrizzleDb) => {
         return c.json({ error: result.error.message }, statusCode);
       }
 
-      return c.json({ user: result.data }, 201);
+      return c.json({ user: result.value }, 201);
     });
 };

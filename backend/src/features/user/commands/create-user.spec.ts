@@ -1,6 +1,6 @@
 import { describe, it, expect, beforeAll, afterAll } from 'vitest';
 import { createUser } from './create-user';
-import { isErr } from '@fyuuki0jp/railway-result';
+import { isErr } from 'result';
 import { setupTestDatabase } from '../../../shared/adapters/db/pglite';
 import type { PGlite } from '@electric-sql/pglite';
 import type { DrizzleDb } from '../../../shared/adapters/db/pglite';
@@ -29,14 +29,14 @@ describe('createUser command', () => {
 
     const result = await createUserCmd()(input);
 
-    expect(result.success).toBe(true);
-    if (result.success) {
-      expect(result.data.email).toBe(input.email);
-      expect(result.data.name).toBe(input.name);
-      expect(result.data.id).toBeDefined();
-      expect(result.data.createdAt).toBeInstanceOf(Date);
-      expect(result.data.updatedAt).toBeInstanceOf(Date);
-      expect(result.data.deletedAt).toBeNull();
+    expect(result.ok).toBe(true);
+    if (result.ok) {
+      expect(result.value.email).toBe(input.email);
+      expect(result.value.name).toBe(input.name);
+      expect(result.value.id).toBeDefined();
+      expect(result.value.createdAt).toBeInstanceOf(Date);
+      expect(result.value.updatedAt).toBeInstanceOf(Date);
+      expect(result.value.deletedAt).toBeNull();
     }
   });
 
@@ -97,10 +97,10 @@ describe('createUser command', () => {
     for (const email of validEmails) {
       const result = await createUserCmd()({ email, name: 'Test User' });
 
-      expect(result.success).toBe(true);
-      if (result.success) {
-        expect(result.data.email).toBe(email);
-        expect(result.data.name).toBe('Test User');
+      expect(result.ok).toBe(true);
+      if (result.ok) {
+        expect(result.value.email).toBe(email);
+        expect(result.value.name).toBe('Test User');
       }
     }
   });
@@ -113,7 +113,7 @@ describe('createUser command', () => {
 
     // Create first user
     const firstResult = await createUserCmd()(input);
-    expect(firstResult.success).toBe(true);
+    expect(firstResult.ok).toBe(true);
 
     // Try to create user with same email
     const secondResult = await createUserCmd()({
@@ -135,10 +135,10 @@ describe('createUser command', () => {
 
     const result = await createUserCmd()(input);
 
-    expect(result.success).toBe(true);
-    if (result.success) {
-      expect(result.data.email).toBe('test-trim@example.com');
-      expect(result.data.name).toBe('Test User');
+    expect(result.ok).toBe(true);
+    if (result.ok) {
+      expect(result.value.email).toBe('test-trim@example.com');
+      expect(result.value.name).toBe('Test User');
     }
   });
 

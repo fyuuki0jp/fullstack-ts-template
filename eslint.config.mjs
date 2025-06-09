@@ -1,13 +1,12 @@
 import js from '@eslint/js';
 import typescript from '@typescript-eslint/eslint-plugin';
 import tsParser from '@typescript-eslint/parser';
-import railway from '@fyuuki0jp/eslint-plugin-railway';
+import resultRules from 'result/eslint-rules';
 import prettier from 'eslint-config-prettier';
 import prettierPlugin from 'eslint-plugin-prettier';
 
 export default [
   js.configs.recommended,
-  railway.configs.recommended,
   prettier,
   {
     ignores: ['**/dist/**', '**/node_modules/**', '**/.turbo/**', '**/coverage/**'],
@@ -51,6 +50,7 @@ export default [
     plugins: {
       '@typescript-eslint': typescript,
       prettier: prettierPlugin,
+      'result': resultRules,
     },
     rules: {
       ...typescript.configs.recommended.rules,
@@ -61,12 +61,22 @@ export default [
       ],
       '@typescript-eslint/explicit-module-boundary-types': 'off',
       '@typescript-eslint/no-explicit-any': 'error',
+      // Railway-oriented programming rules - disabled by default
+      'no-throw-literal': 'error',
+    },
+  },
+  {
+    files: ['backend/src/features/**/*.ts', 'backend/src/entities/**/*.ts'],
+    rules: {
+      // Enable Railway rules only for business logic files
+      'result/require-result-return-type': 'error',
     },
   },
   {
     files: ['**/*.spec.ts', '**/*.spec.tsx'],
     rules: {
-      'eslint-plugin-railway/require-result-return-type': 'off',
+      'no-throw-literal': 'off',
+      'result/require-result-return-type': 'off',
     },
   },
 ];

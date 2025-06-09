@@ -1,0 +1,39 @@
+{
+  "name": "result",
+  "version": "1.0.0",
+  "description": "Result type utilities for error handling",
+  "type": "module",
+  "main": "./dist/index.js",
+  "module": "./dist/index.js",
+  "types": "./dist/index.d.ts",
+  "exports": {
+    ".": {
+      "types": "./dist/index.d.ts",
+      "import": "./dist/index.js",
+      "default": "./dist/index.js"
+    },
+    "./eslint-rules": {
+      "import": "./src/eslint-rules/index.js",
+      "default": "./src/eslint-rules/index.js"
+    }
+  },
+  "scripts": {
+    "prepare": "tsc",
+    "build": "tsc",
+    "dev": "tsc --watch",
+    "test": "vitest",
+    "test:watch": "vitest --watch",
+    "test:coverage": "vitest --coverage",
+    "typecheck": "tsc --noEmit",
+    "lint": "eslint src"
+  },
+  "devDependencies": {
+    "@types/node": "^20.11.17",
+    "typescript": "^5.7.2"
+  },
+  "files": [
+    "dist",
+    "package.json"
+  ],
+  "license": "MIT"
+}

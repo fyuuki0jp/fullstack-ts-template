@@ -1,4 +1,4 @@
-import type { Result } from '@fyuuki0jp/railway-result';
+import type { Result } from 'result';
 
 export interface ExternalServiceAdapter {
   fetch<T>(
