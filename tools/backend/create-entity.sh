@@ -44,9 +44,9 @@ else
     cat > "$ENTITY_DIR/schema.ts" << 'EOF'
 import { pgTable, text, timestamp, uuid } from 'drizzle-orm/pg-core';
 import { z } from 'zod';
+import { ok, err, type Result } from 'result';
 
-// TODO: Define the ${ENTITY_NAME}s table according to your domain requirements
-// Add/remove columns as needed for your specific use case
+// Database table definition
 export const ${ENTITY_NAME}sTable = pgTable('${ENTITY_NAME}s', {
   id: uuid('id').primaryKey().defaultRandom(),
   // TODO: Add your domain-specific fields here
@@ -58,11 +58,11 @@ export const ${ENTITY_NAME}sTable = pgTable('${ENTITY_NAME}s', {
   deletedAt: timestamp('deleted_at'),
 });
 
-// TODO: Define branded types for domain-specific IDs and values
+// Branded types for domain-specific IDs and values
 export type ${PASCAL_CASE_NAME}Id = z.infer<typeof ${PASCAL_CASE_NAME}IdSchema>;
 export const ${PASCAL_CASE_NAME}IdSchema = z.string().uuid().brand<'${PASCAL_CASE_NAME}Id'>();
 
-// TODO: Add validation schemas for your domain fields
+// TODO: Define additional branded types for your domain
 // Example:
 // export type ${PASCAL_CASE_NAME}Title = z.infer<typeof ${PASCAL_CASE_NAME}TitleSchema>;
 // export const ${PASCAL_CASE_NAME}TitleSchema = z
@@ -72,7 +72,7 @@ export const ${PASCAL_CASE_NAME}IdSchema = z.string().uuid().brand<'${PASCAL_CAS
 //   .max(200, 'Title must be 200 characters or less')
 //   .brand<'${PASCAL_CASE_NAME}Title'>();
 
-// TODO: Define select, insert, and update schemas based on your table structure
+// Data validation schemas (for DB consistency only)
 export const ${ENTITY_NAME}SelectSchema = z.object({
   id: ${PASCAL_CASE_NAME}IdSchema,
   // TODO: Add your domain fields with proper validation
@@ -96,89 +96,8 @@ export type Update${PASCAL_CASE_NAME}Input = z.infer<typeof ${ENTITY_NAME}Update
 // Drizzle type inference for compatibility
 export type ${PASCAL_CASE_NAME}SelectType = typeof ${ENTITY_NAME}sTable.$inferSelect;
 export type ${PASCAL_CASE_NAME}InsertType = typeof ${ENTITY_NAME}sTable.$inferInsert;
-EOF
-    # Replace placeholders
-    sed -i "s/\${ENTITY_NAME}/${ENTITY_NAME}/g" "$ENTITY_DIR/schema.ts"
-    sed -i "s/\${PASCAL_CASE_NAME}/${PASCAL_CASE_NAME}/g" "$ENTITY_DIR/schema.ts"
-fi
 
-# Create entity file
-if [ "$DRY_RUN" = true ]; then
-    echo "Would create file: $ENTITY_DIR/entity.ts"
-else
-    cat > "$ENTITY_DIR/entity.ts" << 'EOF'
-import { ok, err, type Result } from 'result';
-import {
-  ${PASCAL_CASE_NAME}Id,
-  ${PASCAL_CASE_NAME}IdSchema,
-  ${PASCAL_CASE_NAME},
-  Create${PASCAL_CASE_NAME}Input,
-  Update${PASCAL_CASE_NAME}Input,
-  ${ENTITY_NAME}SelectSchema,
-  ${ENTITY_NAME}InsertSchema,
-  ${ENTITY_NAME}UpdateSchema,
-  // TODO: Import additional domain types from schema as needed
-} from './schema';
-
-// Re-export types and schemas from schema
-export type {
-  ${PASCAL_CASE_NAME}Id,
-  ${PASCAL_CASE_NAME},
-  Create${PASCAL_CASE_NAME}Input,
-  Update${PASCAL_CASE_NAME}Input,
-  // TODO: Export additional domain types as needed
-};
-
-export {
-  ${PASCAL_CASE_NAME}IdSchema,
-  ${ENTITY_NAME}SelectSchema as ${PASCAL_CASE_NAME}Schema,
-  ${ENTITY_NAME}InsertSchema as Create${PASCAL_CASE_NAME}InputSchema,
-  ${ENTITY_NAME}UpdateSchema as Update${PASCAL_CASE_NAME}InputSchema,
-  // TODO: Export additional validation schemas as needed
-};
-
-// TODO: Implement domain helper functions for validation
-export const validate${PASCAL_CASE_NAME} = (data: unknown): Result<${PASCAL_CASE_NAME}, Error> => {
-  const result = ${ENTITY_NAME}SelectSchema.safeParse(data);
-  if (!result.success) {
-    const errorMessage = result.error.issues
-      .map((issue) => issue.message)
-      .join(', ');
-    return err(new Error(`${PASCAL_CASE_NAME} validation failed: ${errorMessage}`));
-  }
-  return ok(result.data);
-};
-
-export const validateCreate${PASCAL_CASE_NAME}Input = (
-  data: unknown
-): Result<Create${PASCAL_CASE_NAME}Input, Error> => {
-  const result = ${ENTITY_NAME}InsertSchema.safeParse(data);
-  if (!result.success) {
-    const errorMessage = result.error.issues
-      .map((issue) => issue.message)
-      .join(', ');
-    return err(
-      new Error(`Create ${PASCAL_CASE_NAME} input validation failed: ${errorMessage}`)
-    );
-  }
-  return ok(result.data);
-};
-
-export const validateUpdate${PASCAL_CASE_NAME}Input = (
-  data: unknown
-): Result<Update${PASCAL_CASE_NAME}Input, Error> => {
-  const result = ${ENTITY_NAME}UpdateSchema.safeParse(data);
-  if (!result.success) {
-    const errorMessage = result.error.issues
-      .map((issue) => issue.message)
-      .join(', ');
-    return err(
-      new Error(`Update ${PASCAL_CASE_NAME} input validation failed: ${errorMessage}`)
-    );
-  }
-  return ok(result.data);
-};
-
+// ID generation helper
 export const create${PASCAL_CASE_NAME}Id = (): Result<${PASCAL_CASE_NAME}Id, Error> => {
   const result = ${PASCAL_CASE_NAME}IdSchema.safeParse(globalThis.crypto.randomUUID());
   if (!result.success) {
@@ -187,45 +106,274 @@ export const create${PASCAL_CASE_NAME}Id = (): Result<${PASCAL_CASE_NAME}Id, Err
   return ok(result.data);
 };
 
-// TODO: Add additional domain-specific helper functions as needed
-// Examples:
-// - Business logic validation
-// - Data transformation functions
-// - Domain-specific calculations
+// Data validation helpers (DB consistency only - no business rules)
+export const validate${PASCAL_CASE_NAME}Data = (data: unknown): Result<${PASCAL_CASE_NAME}, Error> => {
+  const result = ${ENTITY_NAME}SelectSchema.safeParse(data);
+  if (!result.success) {
+    return err(new Error('Invalid ${ENTITY_NAME} data format'));
+  }
+  return ok(result.data);
+};
+
+export const validate${PASCAL_CASE_NAME}InsertData = (
+  data: unknown
+): Result<Create${PASCAL_CASE_NAME}Input, Error> => {
+  const result = ${ENTITY_NAME}InsertSchema.safeParse(data);
+  if (!result.success) {
+    return err(new Error('Invalid ${ENTITY_NAME} insert data format'));
+  }
+  return ok(result.data);
+};
+
+export const validate${PASCAL_CASE_NAME}UpdateData = (
+  data: unknown
+): Result<Update${PASCAL_CASE_NAME}Input, Error> => {
+  const result = ${ENTITY_NAME}UpdateSchema.safeParse(data);
+  if (!result.success) {
+    return err(new Error('Invalid ${ENTITY_NAME} update data format'));
+  }
+  return ok(result.data);
+};
 EOF
     # Replace placeholders
-    sed -i "s/\${PASCAL_CASE_NAME}/${PASCAL_CASE_NAME}/g" "$ENTITY_DIR/entity.ts"
-    sed -i "s/\${ENTITY_NAME}/${ENTITY_NAME}/g" "$ENTITY_DIR/entity.ts"
+    sed -i "s/\${ENTITY_NAME}/${ENTITY_NAME}/g" "$ENTITY_DIR/schema.ts"
+    sed -i "s/\${PASCAL_CASE_NAME}/${PASCAL_CASE_NAME}/g" "$ENTITY_DIR/schema.ts"
 fi
 
-# Create entity test file
+# Create repository file
 if [ "$DRY_RUN" = true ]; then
-    echo "Would create file: $ENTITY_DIR/entity.spec.ts"
-    echo ""
+    echo "Would create file: $ENTITY_DIR/repository.ts"
 else
-    cat > "$ENTITY_DIR/entity.spec.ts" << 'EOF'
-import { describe, it, expect, beforeAll, afterAll } from 'vitest';
-import { isErr } from 'result';
-import type { PGlite } from '@electric-sql/pglite';
-import { setupTestDatabase } from '@/shared/adapters/db/pglite';
-import type { DrizzleDb } from '@/shared/adapters/db';
-import { ${ENTITY_NAME}sTable } from './schema';
+    cat > "$ENTITY_DIR/repository.ts" << 'EOF'
+import { depend } from 'velona';
+import { eq, isNull, and } from 'drizzle-orm';
+import { ok, err, isErr, type Result } from 'result';
 import {
+  ${ENTITY_NAME}sTable,
+  validate${PASCAL_CASE_NAME}Data,
+  create${PASCAL_CASE_NAME}Id,
   type ${PASCAL_CASE_NAME},
   type Create${PASCAL_CASE_NAME}Input,
   type Update${PASCAL_CASE_NAME}Input,
-  validate${PASCAL_CASE_NAME},
-  validateCreate${PASCAL_CASE_NAME}Input,
-  validateUpdate${PASCAL_CASE_NAME}Input,
-  create${PASCAL_CASE_NAME}Id,
-} from './entity';
+  type ${PASCAL_CASE_NAME}Id,
+} from './schema';
+import type { DrizzleDb } from '@/shared/adapters/db/pglite';
 
-// TODO: For comprehensive test coverage using decision tables:
-// 1. Create decision tables using MCP tools for different scenarios
-// 2. Generate test cases from decision tables using mcp__testing-mcp__generate_tests
-// 3. Add the generated tests to this file
+// Pure CRUD operations (no business logic)
+export const insert${PASCAL_CASE_NAME} = depend(
+  { db: {} as DrizzleDb },
+  ({ db }) =>
+    async (data: Create${PASCAL_CASE_NAME}Input): Promise<Result<${PASCAL_CASE_NAME}, Error>> => {
+      try {
+        const idResult = create${PASCAL_CASE_NAME}Id();
+        if (isErr(idResult)) {
+          return idResult;
+        }
+        const id = idResult.value;
+        const now = new Date();
 
-describe('${PASCAL_CASE_NAME} Entity', () => {
+        const [db${PASCAL_CASE_NAME}] = await db
+          .insert(${ENTITY_NAME}sTable)
+          .values({
+            id,
+            ...data,
+            createdAt: now,
+            updatedAt: now,
+            deletedAt: null,
+          })
+          .returning();
+
+        // Validate returned data structure
+        const ${ENTITY_NAME}Result = validate${PASCAL_CASE_NAME}Data({
+          id: db${PASCAL_CASE_NAME}.id,
+          // TODO: Add your domain fields here
+          createdAt: db${PASCAL_CASE_NAME}.createdAt,
+          updatedAt: db${PASCAL_CASE_NAME}.updatedAt,
+          deletedAt: db${PASCAL_CASE_NAME}.deletedAt,
+        });
+
+        if (isErr(${ENTITY_NAME}Result)) {
+          return err(new Error('Invalid ${ENTITY_NAME} data returned from database'));
+        }
+
+        return ok(${ENTITY_NAME}Result.value);
+      } catch (error) {
+        if (error instanceof Error) {
+          return err(error);
+        }
+        return err(new Error('Database error occurred'));
+      }
+    }
+);
+
+export const select${PASCAL_CASE_NAME}ById = depend(
+  { db: {} as DrizzleDb },
+  ({ db }) =>
+    async (id: ${PASCAL_CASE_NAME}Id): Promise<Result<${PASCAL_CASE_NAME} | null, Error>> => {
+      try {
+        const [db${PASCAL_CASE_NAME}] = await db
+          .select()
+          .from(${ENTITY_NAME}sTable)
+          .where(and(eq(${ENTITY_NAME}sTable.id, id), isNull(${ENTITY_NAME}sTable.deletedAt)))
+          .limit(1);
+
+        if (!db${PASCAL_CASE_NAME}) {
+          return ok(null);
+        }
+
+        const ${ENTITY_NAME}Result = validate${PASCAL_CASE_NAME}Data({
+          id: db${PASCAL_CASE_NAME}.id,
+          // TODO: Add your domain fields here
+          createdAt: db${PASCAL_CASE_NAME}.createdAt,
+          updatedAt: db${PASCAL_CASE_NAME}.updatedAt,
+          deletedAt: db${PASCAL_CASE_NAME}.deletedAt,
+        });
+
+        if (isErr(${ENTITY_NAME}Result)) {
+          return err(new Error('Invalid ${ENTITY_NAME} data from database'));
+        }
+
+        return ok(${ENTITY_NAME}Result.value);
+      } catch (error) {
+        if (error instanceof Error) {
+          return err(error);
+        }
+        return err(new Error('Database error occurred'));
+      }
+    }
+);
+
+export const selectActive${PASCAL_CASE_NAME}s = depend(
+  { db: {} as DrizzleDb },
+  ({ db }) =>
+    async (): Promise<Result<${PASCAL_CASE_NAME}[], Error>> => {
+      try {
+        const db${PASCAL_CASE_NAME}s = await db
+          .select()
+          .from(${ENTITY_NAME}sTable)
+          .where(isNull(${ENTITY_NAME}sTable.deletedAt))
+          .orderBy(${ENTITY_NAME}sTable.createdAt, ${ENTITY_NAME}sTable.id);
+
+        const ${ENTITY_NAME}s: ${PASCAL_CASE_NAME}[] = [];
+        for (const db${PASCAL_CASE_NAME} of db${PASCAL_CASE_NAME}s) {
+          const ${ENTITY_NAME}Result = validate${PASCAL_CASE_NAME}Data({
+            id: db${PASCAL_CASE_NAME}.id,
+            // TODO: Add your domain fields here
+            createdAt: db${PASCAL_CASE_NAME}.createdAt,
+            updatedAt: db${PASCAL_CASE_NAME}.updatedAt,
+            deletedAt: db${PASCAL_CASE_NAME}.deletedAt,
+          });
+
+          if (isErr(${ENTITY_NAME}Result)) {
+            return err(
+              new Error(`Invalid ${ENTITY_NAME} data from database for id: ${db${PASCAL_CASE_NAME}.id}`)
+            );
+          }
+
+          ${ENTITY_NAME}s.push(${ENTITY_NAME}Result.value);
+        }
+
+        return ok(${ENTITY_NAME}s);
+      } catch (error) {
+        if (error instanceof Error) {
+          return err(error);
+        }
+        return err(new Error('Database error occurred'));
+      }
+    }
+);
+
+export const update${PASCAL_CASE_NAME} = depend(
+  { db: {} as DrizzleDb },
+  ({ db }) =>
+    async (
+      id: ${PASCAL_CASE_NAME}Id,
+      data: Update${PASCAL_CASE_NAME}Input
+    ): Promise<Result<${PASCAL_CASE_NAME} | null, Error>> => {
+      try {
+        const [db${PASCAL_CASE_NAME}] = await db
+          .update(${ENTITY_NAME}sTable)
+          .set({
+            ...data,
+            updatedAt: new Date(),
+          })
+          .where(and(eq(${ENTITY_NAME}sTable.id, id), isNull(${ENTITY_NAME}sTable.deletedAt)))
+          .returning();
+
+        if (!db${PASCAL_CASE_NAME}) {
+          return ok(null);
+        }
+
+        const ${ENTITY_NAME}Result = validate${PASCAL_CASE_NAME}Data({
+          id: db${PASCAL_CASE_NAME}.id,
+          // TODO: Add your domain fields here
+          createdAt: db${PASCAL_CASE_NAME}.createdAt,
+          updatedAt: db${PASCAL_CASE_NAME}.updatedAt,
+          deletedAt: db${PASCAL_CASE_NAME}.deletedAt,
+        });
+
+        if (isErr(${ENTITY_NAME}Result)) {
+          return err(new Error('Invalid ${ENTITY_NAME} data returned from database'));
+        }
+
+        return ok(${ENTITY_NAME}Result.value);
+      } catch (error) {
+        if (error instanceof Error) {
+          return err(error);
+        }
+        return err(new Error('Database error occurred'));
+      }
+    }
+);
+
+export const delete${PASCAL_CASE_NAME} = depend(
+  { db: {} as DrizzleDb },
+  ({ db }) =>
+    async (id: ${PASCAL_CASE_NAME}Id): Promise<Result<boolean, Error>> => {
+      try {
+        const result = await db
+          .update(${ENTITY_NAME}sTable)
+          .set({ deletedAt: new Date() })
+          .where(and(eq(${ENTITY_NAME}sTable.id, id), isNull(${ENTITY_NAME}sTable.deletedAt)))
+          .returning({ id: ${ENTITY_NAME}sTable.id });
+
+        return ok(result.length > 0);
+      } catch (error) {
+        if (error instanceof Error) {
+          return err(error);
+        }
+        return err(new Error('Database error occurred'));
+      }
+    }
+);
+EOF
+    # Replace placeholders
+    sed -i "s/\${PASCAL_CASE_NAME}/${PASCAL_CASE_NAME}/g" "$ENTITY_DIR/repository.ts"
+    sed -i "s/\${ENTITY_NAME}/${ENTITY_NAME}/g" "$ENTITY_DIR/repository.ts"
+fi
+
+# Create repository test file
+if [ "$DRY_RUN" = true ]; then
+    echo "Would create file: $ENTITY_DIR/repository.spec.ts"
+    echo ""
+else
+    cat > "$ENTITY_DIR/repository.spec.ts" << 'EOF'
+import { describe, it, expect, beforeAll, afterAll } from 'vitest';
+import type { PGlite } from '@electric-sql/pglite';
+import { setupTestDatabase } from '../../shared/adapters/db/pglite';
+import type { DrizzleDb } from '../../shared/adapters/db/pglite';
+import {
+  insert${PASCAL_CASE_NAME},
+  select${PASCAL_CASE_NAME}ById,
+  selectActive${PASCAL_CASE_NAME}s,
+  update${PASCAL_CASE_NAME},
+  delete${PASCAL_CASE_NAME},
+} from './repository';
+import type { Create${PASCAL_CASE_NAME}Input, Update${PASCAL_CASE_NAME}Input } from './schema';
+// TODO: Import your branded types for testing
+// import { ${PASCAL_CASE_NAME}TitleSchema } from './schema';
+
+describe('${PASCAL_CASE_NAME} Repository', () => {
   let client: PGlite;
   let db: DrizzleDb;
 
@@ -239,22 +387,19 @@ describe('${PASCAL_CASE_NAME} Entity', () => {
     await client.close();
   });
 
-  describe('validate${PASCAL_CASE_NAME}', () => {
-    // TODO: Add test cases based on your domain schema
-    it('should validate a correct ${ENTITY_NAME}', () => {
-      const ${ENTITY_NAME}Data = {
-        id: '550e8400-e29b-41d4-a716-446655440001',
-        // TODO: Add your domain fields here based on schema
-        createdAt: new Date(),
-        updatedAt: new Date(),
-        deletedAt: null,
+  describe('insert${PASCAL_CASE_NAME}', () => {
+    it('should insert a new ${ENTITY_NAME}', async () => {
+      const input: Create${PASCAL_CASE_NAME}Input = {
+        // TODO: Add your domain fields here
+        // Example: title: ${PASCAL_CASE_NAME}TitleSchema.parse('Test Title'),
       };
 
-      const result = validate${PASCAL_CASE_NAME}(${ENTITY_NAME}Data);
+      const insert${PASCAL_CASE_NAME}Fn = insert${PASCAL_CASE_NAME}.inject({ db })();
+      const result = await insert${PASCAL_CASE_NAME}Fn(input);
 
       expect(result.ok).toBe(true);
       if (result.ok) {
-        expect(result.value.id).toBe('550e8400-e29b-41d4-a716-446655440001');
+        expect(result.value.id).toBeDefined();
         // TODO: Add assertions for your domain fields
         expect(result.value.createdAt).toBeInstanceOf(Date);
         expect(result.value.updatedAt).toBeInstanceOf(Date);
@@ -262,116 +407,167 @@ describe('${PASCAL_CASE_NAME} Entity', () => {
       }
     });
 
-    it('should reject invalid ${ENTITY_NAME} data', () => {
-      const invalid${PASCAL_CASE_NAME}Data = {
-        id: 'invalid-id',
-        // TODO: Add invalid domain field values
+    it('should handle database errors gracefully', async () => {
+      // TODO: Add test for database constraint violations or other errors
+      // Example: duplicate key violation, foreign key constraint, etc.
+    });
+  });
+
+  describe('select${PASCAL_CASE_NAME}ById', () => {
+    it('should return ${ENTITY_NAME} when found', async () => {
+      // First, create a ${ENTITY_NAME}
+      const input: Create${PASCAL_CASE_NAME}Input = {
+        // TODO: Add your domain fields here
       };
 
-      const result = validate${PASCAL_CASE_NAME}(invalid${ENTITY_NAME}Data);
+      const insert${PASCAL_CASE_NAME}Fn = insert${PASCAL_CASE_NAME}.inject({ db })();
+      const insertResult = await insert${PASCAL_CASE_NAME}Fn(input);
+      expect(insertResult.ok).toBe(true);
 
-      expect(isErr(result)).toBe(true);
-      if (isErr(result)) {
-        expect(result.error.message).toContain('${PASCAL_CASE_NAME} validation failed');
+      if (insertResult.ok) {
+        const select${PASCAL_CASE_NAME}ByIdFn = select${PASCAL_CASE_NAME}ById.inject({ db })();
+        const selectResult = await select${PASCAL_CASE_NAME}ByIdFn(insertResult.value.id);
+
+        expect(selectResult.ok).toBe(true);
+        if (selectResult.ok) {
+          expect(selectResult.value).not.toBeNull();
+          expect(selectResult.value?.id).toBe(insertResult.value.id);
+        }
       }
     });
-  });
 
-  describe('validateCreate${PASCAL_CASE_NAME}Input', () => {
-    // TODO: Add test cases for create input validation
-    // Consider using MCP decision tables for comprehensive test coverage
+    it('should return null when ${ENTITY_NAME} not found', async () => {
+      const { create${PASCAL_CASE_NAME}Id } = await import('./schema');
+      const idResult = create${PASCAL_CASE_NAME}Id();
+      expect(idResult.ok).toBe(true);
+      if (!idResult.ok) return;
 
-    it('should validate correct create input', () => {
-      const input = {
-        // TODO: Add required fields for creating ${ENTITY_NAME}
-      };
-
-      const result = validateCreate${PASCAL_CASE_NAME}Input(input);
-
-      expect(result.ok).toBe(true);
-      // TODO: Add assertions for your domain fields
-    });
-
-    it('should reject invalid create input', () => {
-      const invalidInput = {
-        // TODO: Add invalid field values
-      };
-
-      const result = validateCreate${PASCAL_CASE_NAME}Input(invalidInput);
-
-      expect(isErr(result)).toBe(true);
-      if (isErr(result)) {
-        // TODO: Add specific error message checks
-        expect(result.error.message).toContain('validation failed');
-      }
-    });
-  });
-
-  describe('validateUpdate${PASCAL_CASE_NAME}Input', () => {
-    // TODO: Add test cases for update input validation
-
-    it('should validate correct update input', () => {
-      const input = {
-        // TODO: Add fields to update
-      };
-
-      const result = validateUpdate${PASCAL_CASE_NAME}Input(input);
-
-      expect(result.ok).toBe(true);
-    });
-
-    it('should validate empty update input', () => {
-      const input = {};
-
-      const result = validateUpdate${PASCAL_CASE_NAME}Input(input);
-
-      expect(result.ok).toBe(true);
-    });
-  });
-
-  describe('create${PASCAL_CASE_NAME}Id', () => {
-    it('should generate a valid ${PASCAL_CASE_NAME}Id', () => {
-      const result = create${PASCAL_CASE_NAME}Id();
+      const select${PASCAL_CASE_NAME}ByIdFn = select${PASCAL_CASE_NAME}ById.inject({ db })();
+      const result = await select${PASCAL_CASE_NAME}ByIdFn(idResult.value);
 
       expect(result.ok).toBe(true);
       if (result.ok) {
-        expect(typeof result.value).toBe('string');
-        expect(result.value).toMatch(/^[0-9a-f]{8}-[0-9a-f]{4}-4[0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i);
+        expect(result.value).toBeNull();
       }
     });
   });
 
-  // TODO: Add domain repository tests here
-  describe('${PASCAL_CASE_NAME} Repository Operations', () => {
-    // Example test structure for when you implement repository operations
-    it.skip('should create a new ${ENTITY_NAME} in database', async () => {
-      // TODO: Implement when you add repository operations
-      // const input: Create${PASCAL_CASE_NAME}Input = {
-      //   // Add fields
-      // };
-      // const result = await create${PASCAL_CASE_NAME}(db, input);
-      // expect(result.ok).toBe(true);
-    });
+  describe('selectActive${PASCAL_CASE_NAME}s', () => {
+    it('should return all active ${ENTITY_NAME}s', async () => {
+      const selectActive${PASCAL_CASE_NAME}sFn = selectActive${PASCAL_CASE_NAME}s.inject({ db })();
+      const result = await selectActive${PASCAL_CASE_NAME}sFn();
 
-    it.skip('should update an existing ${ENTITY_NAME}', async () => {
-      // TODO: Implement when you add repository operations
-    });
-
-    it.skip('should delete a ${ENTITY_NAME}', async () => {
-      // TODO: Implement when you add repository operations
+      expect(result.ok).toBe(true);
+      if (result.ok) {
+        expect(Array.isArray(result.value)).toBe(true);
+        // All returned ${ENTITY_NAME}s should have deletedAt as null
+        result.value.forEach(${ENTITY_NAME} => {
+          expect(${ENTITY_NAME}.deletedAt).toBeNull();
+        });
+      }
     });
   });
 
-  // TODO: Add decision table-based tests here
-  // Example workflow:
-  // 1. Use mcp__testing-mcp__create_decision_table to create test scenarios
-  // 2. Use mcp__testing-mcp__generate_tests to generate test code
-  // 3. Copy generated tests into appropriate describe blocks above
+  describe('update${PASCAL_CASE_NAME}', () => {
+    it('should update existing ${ENTITY_NAME}', async () => {
+      // First, create a ${ENTITY_NAME}
+      const input: Create${PASCAL_CASE_NAME}Input = {
+        // TODO: Add your domain fields here
+      };
+
+      const insert${PASCAL_CASE_NAME}Fn = insert${PASCAL_CASE_NAME}.inject({ db })();
+      const insertResult = await insert${PASCAL_CASE_NAME}Fn(input);
+      expect(insertResult.ok).toBe(true);
+
+      if (insertResult.ok) {
+        const updateData: Update${PASCAL_CASE_NAME}Input = {
+          // TODO: Add fields to update
+        };
+
+        const update${PASCAL_CASE_NAME}Fn = update${PASCAL_CASE_NAME}.inject({ db })();
+        const updateResult = await update${PASCAL_CASE_NAME}Fn(insertResult.value.id, updateData);
+
+        expect(updateResult.ok).toBe(true);
+        if (updateResult.ok && updateResult.value) {
+          expect(updateResult.value.id).toBe(insertResult.value.id);
+          // TODO: Add assertions for updated fields
+          expect(updateResult.value.updatedAt.getTime()).toBeGreaterThan(
+            insertResult.value.updatedAt.getTime()
+          );
+        }
+      }
+    });
+
+    it('should return null when updating non-existent ${ENTITY_NAME}', async () => {
+      const { create${PASCAL_CASE_NAME}Id } = await import('./schema');
+      const idResult = create${PASCAL_CASE_NAME}Id();
+      expect(idResult.ok).toBe(true);
+      if (!idResult.ok) return;
+
+      const updateData: Update${PASCAL_CASE_NAME}Input = {
+        // TODO: Add fields to update
+      };
+
+      const update${PASCAL_CASE_NAME}Fn = update${PASCAL_CASE_NAME}.inject({ db })();
+      const result = await update${PASCAL_CASE_NAME}Fn(idResult.value, updateData);
+
+      expect(result.ok).toBe(true);
+      if (result.ok) {
+        expect(result.value).toBeNull();
+      }
+    });
+  });
+
+  describe('delete${PASCAL_CASE_NAME}', () => {
+    it('should soft delete existing ${ENTITY_NAME}', async () => {
+      // First, create a ${ENTITY_NAME}
+      const input: Create${PASCAL_CASE_NAME}Input = {
+        // TODO: Add your domain fields here
+      };
+
+      const insert${PASCAL_CASE_NAME}Fn = insert${PASCAL_CASE_NAME}.inject({ db })();
+      const insertResult = await insert${PASCAL_CASE_NAME}Fn(input);
+      expect(insertResult.ok).toBe(true);
+
+      if (insertResult.ok) {
+        const delete${PASCAL_CASE_NAME}Fn = delete${PASCAL_CASE_NAME}.inject({ db })();
+        const deleteResult = await delete${PASCAL_CASE_NAME}Fn(insertResult.value.id);
+
+        expect(deleteResult.ok).toBe(true);
+        if (deleteResult.ok) {
+          expect(deleteResult.value).toBe(true);
+        }
+
+        // Verify the ${ENTITY_NAME} is not returned by selectActive
+        const select${PASCAL_CASE_NAME}ByIdFn = select${PASCAL_CASE_NAME}ById.inject({ db })();
+        const selectResult = await select${PASCAL_CASE_NAME}ByIdFn(insertResult.value.id);
+        expect(selectResult.ok).toBe(true);
+        if (selectResult.ok) {
+          expect(selectResult.value).toBeNull();
+        }
+      }
+    });
+
+    it('should return false when deleting non-existent ${ENTITY_NAME}', async () => {
+      const { create${PASCAL_CASE_NAME}Id } = await import('./schema');
+      const idResult = create${PASCAL_CASE_NAME}Id();
+      expect(idResult.ok).toBe(true);
+      if (!idResult.ok) return;
+
+      const delete${PASCAL_CASE_NAME}Fn = delete${PASCAL_CASE_NAME}.inject({ db })();
+      const result = await delete${PASCAL_CASE_NAME}Fn(idResult.value);
+
+      expect(result.ok).toBe(true);
+      if (result.ok) {
+        expect(result.value).toBe(false);
+      }
+    });
+  });
 });
 EOF
     # Replace placeholders
-    sed -i "s/\${PASCAL_CASE_NAME}/${PASCAL_CASE_NAME}/g" "$ENTITY_DIR/entity.spec.ts"
-    sed -i "s/\${ENTITY_NAME}/${ENTITY_NAME}/g" "$ENTITY_DIR/entity.spec.ts"
+    sed -i "s/\${PASCAL_CASE_NAME}/${PASCAL_CASE_NAME}/g" "$ENTITY_DIR/repository.spec.ts"
+    sed -i "s/\${ENTITY_NAME}/${ENTITY_NAME}/g" "$ENTITY_DIR/repository.spec.ts"
 fi
 
 # Create index file for entity
@@ -379,8 +575,8 @@ if [ "$DRY_RUN" = true ]; then
     echo "Would create file: $ENTITY_DIR/index.ts"
 else
     cat > "$ENTITY_DIR/index.ts" << EOF
-export * from './entity';
 export * from './schema';
+export * from './repository';
 EOF
 fi
 
@@ -408,23 +604,29 @@ fi
 if [ "$DRY_RUN" = true ]; then
     echo "✅ DRY RUN completed for backend entity '${PASCAL_CASE_NAME}'"
     echo "📁 Would create files:"
-    echo "   - $ENTITY_DIR/schema.ts (Drizzle table definition)"
-    echo "   - $ENTITY_DIR/entity.ts (Entity with validation)"
-    echo "   - $ENTITY_DIR/entity.spec.ts"
+    echo "   - $ENTITY_DIR/schema.ts (Table definition, types, validation)"
+    echo "   - $ENTITY_DIR/repository.ts (CRUD operations with Railway Result)"
+    echo "   - $ENTITY_DIR/repository.spec.ts (Repository tests)"
     echo "   - $ENTITY_DIR/index.ts"
     echo "   - Update $ENTITIES_INDEX"
 else
     echo "✅ Backend entity '${PASCAL_CASE_NAME}' created successfully!"
     echo "📁 Created files:"
-    echo "   - $ENTITY_DIR/schema.ts (Drizzle table definition)"
-    echo "   - $ENTITY_DIR/entity.ts (Entity with validation)"
-    echo "   - $ENTITY_DIR/entity.spec.ts"
+    echo "   - $ENTITY_DIR/schema.ts (Table definition, types, validation)"
+    echo "   - $ENTITY_DIR/repository.ts (CRUD operations with Railway Result)"
+    echo "   - $ENTITY_DIR/repository.spec.ts (Repository tests)"
     echo "   - $ENTITY_DIR/index.ts"
 fi
 echo ""
-echo "Next steps:"
-echo "1. Update the table schema in schema.ts according to your domain"
-echo "2. Update the entity fields and validation in entity.ts" 
-echo "3. Run 'yarn drizzle:generate' to create migration files"
-echo "4. Run 'yarn drizzle:migrate' to apply migrations"
-echo "5. Create a feature that uses this entity: ./tools/backend/create-feature.sh ${ENTITY_NAME}"
+echo "Next steps for TDD development:"
+echo "1. 🔴 RED: Update schema.ts with your domain fields and run failing tests"
+echo "   - Add branded types for domain-specific validations"
+echo "   - Update test cases in repository.spec.ts with actual field values"
+echo "2. 🟢 GREEN: Make tests pass by implementing minimal changes"
+echo "   - Run: yarn workspace backend test src/entities/${ENTITY_NAME}/"
+echo "3. 🔵 BLUE: Refactor while keeping tests green"
+echo "4. Generate comprehensive test cases using MCP tools:"
+echo "   - Create decision tables: mcp__testing-mcp__create_decision_table"
+echo "   - Generate additional tests: mcp__testing-mcp__generate_tests"
+echo "5. Create a feature that uses this entity: ./tools/backend/create-feature.sh ${ENTITY_NAME}-management ${ENTITY_NAME}"
+echo "6. Run 'yarn drizzle:generate' to create migration files (migrations auto-apply on startup)"
