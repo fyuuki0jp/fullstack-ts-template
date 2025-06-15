@@ -10,7 +10,7 @@ import {
   type UpdateUserInput,
   type UserId,
 } from './schema';
-import type { DrizzleDb } from '@/shared/adapters/db/pglite';
+import type { DrizzleDb } from '../../shared/adapters/db/pglite';
 
 // Pure CRUD operations (no business logic)
 export const insertUser = depend(

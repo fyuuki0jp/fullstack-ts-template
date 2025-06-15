@@ -1,4 +1,4 @@
-import type { User } from '@/entities/user';
+import type { User } from '../../../entities/user';
 import { err, ok, Result } from 'result';
 
 // Business rules (pure functions)
