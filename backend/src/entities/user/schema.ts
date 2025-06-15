@@ -1,7 +1,8 @@
 import { pgTable, text, timestamp, uuid } from 'drizzle-orm/pg-core';
 import { z } from 'zod';
+import { ok, err, type Result } from 'result';
 
-// Define the users table - this provides type-safe database operations
+// Database table definition
 export const usersTable = pgTable('users', {
   id: uuid('id').primaryKey().defaultRandom(),
   email: text('email').notNull().unique(),
@@ -15,13 +16,14 @@ export const usersTable = pgTable('users', {
 export type UserId = z.infer<typeof UserIdSchema>;
 export const UserIdSchema = z.string().uuid().brand<'UserId'>();
 
-export type Email = z.infer<typeof EmailSchema>;
-export const EmailSchema = z
+// Define additional branded types for our domain
+export type UserEmail = z.infer<typeof UserEmailSchema>;
+export const UserEmailSchema = z
   .string()
   .trim()
   .min(1, 'Email is required')
   .email('Please enter a valid email address')
-  .brand<'Email'>();
+  .brand<'UserEmail'>();
 
 export type UserName = z.infer<typeof UserNameSchema>;
 export const UserNameSchema = z
@@ -31,10 +33,10 @@ export const UserNameSchema = z
   .max(100, 'Name must be 100 characters or less')
   .brand<'UserName'>();
 
-// Manual Zod schemas with branded types - compatible with Drizzle table structure
+// Data validation schemas (for DB consistency only)
 export const userSelectSchema = z.object({
   id: UserIdSchema,
-  email: EmailSchema,
+  email: UserEmailSchema,
   name: UserNameSchema,
   createdAt: z.date(),
   updatedAt: z.date(),
@@ -42,7 +44,7 @@ export const userSelectSchema = z.object({
 });
 
 export const userInsertSchema = z.object({
-  email: EmailSchema,
+  email: UserEmailSchema,
   name: UserNameSchema,
 });
 
@@ -53,13 +55,44 @@ export type User = z.infer<typeof userSelectSchema>;
 export type CreateUserInput = z.infer<typeof userInsertSchema>;
 export type UpdateUserInput = z.infer<typeof userUpdateSchema>;
 
-// Demonstrate Drizzle's type inference capabilities
+// Drizzle type inference for compatibility
 export type UserSelectType = typeof usersTable.$inferSelect;
 export type UserInsertType = typeof usersTable.$inferInsert;
 
-// Comment: This approach provides:
-// 1. Type-safe database operations via Drizzle table definition
-// 2. Branded types for domain safety
-// 3. Manual Zod schemas for validation
-// 4. Full compatibility with existing code
-// 5. Future migration path to drizzle-zod when compatibility improves
+// ID generation helper
+export const createUserId = (): Result<UserId, Error> => {
+  const result = UserIdSchema.safeParse(globalThis.crypto.randomUUID());
+  if (!result.success) {
+    return err(new Error('Failed to generate UserId'));
+  }
+  return ok(result.data);
+};
+
+// Data validation helpers (DB consistency only - no business rules)
+export const validateUserData = (data: unknown): Result<User, Error> => {
+  const result = userSelectSchema.safeParse(data);
+  if (!result.success) {
+    return err(new Error('Invalid user data format'));
+  }
+  return ok(result.data);
+};
+
+export const validateUserInsertData = (
+  data: unknown
+): Result<CreateUserInput, Error> => {
+  const result = userInsertSchema.safeParse(data);
+  if (!result.success) {
+    return err(new Error('Invalid user insert data format'));
+  }
+  return ok(result.data);
+};
+
+export const validateUserUpdateData = (
+  data: unknown
+): Result<UpdateUserInput, Error> => {
+  const result = userUpdateSchema.safeParse(data);
+  if (!result.success) {
+    return err(new Error('Invalid user update data format'));
+  }
+  return ok(result.data);
+};

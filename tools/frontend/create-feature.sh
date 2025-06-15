@@ -60,18 +60,18 @@ else
     mkdir -p "$FEATURE_DIR/model"
 fi
 
-# Check if backend entity exists (updated for new directory structure)
+# Check if backend entity exists (updated for v2 directory structure)
 BACKEND_ENTITY_DIR="backend/src/entities/${ENTITY_NAME}"
 BACKEND_ENTITY_SCHEMA="$BACKEND_ENTITY_DIR/schema.ts"
-BACKEND_ENTITY_FILE="$BACKEND_ENTITY_DIR/entity.ts"
+BACKEND_ENTITY_REPOSITORY="$BACKEND_ENTITY_DIR/repository.ts"
 
-if [ ! -d "$BACKEND_ENTITY_DIR" ] || [ ! -f "$BACKEND_ENTITY_SCHEMA" ] || [ ! -f "$BACKEND_ENTITY_FILE" ]; then
+if [ ! -d "$BACKEND_ENTITY_DIR" ] || [ ! -f "$BACKEND_ENTITY_SCHEMA" ] || [ ! -f "$BACKEND_ENTITY_REPOSITORY" ]; then
     echo "⚠️  Backend entity '${ENTITY_NAME}' not found. Please create it first using:"
     echo "   ./tools/backend/create-entity.sh ${ENTITY_NAME}"
     echo ""
     echo "Expected files:"
     echo "   - $BACKEND_ENTITY_SCHEMA"
-    echo "   - $BACKEND_ENTITY_FILE"
+    echo "   - $BACKEND_ENTITY_REPOSITORY"
     exit 1
 fi
 
@@ -81,31 +81,33 @@ if [ "$DRY_RUN" = true ]; then
 else
     cat > "frontend/src/shared/types/${ENTITY_NAME}.ts" << EOF
 import { z } from 'zod';
-// Import backend types directly to avoid duplication
-import type {
-  ${PASCAL_CASE_NAME} as Backend${PASCAL_CASE_NAME},
-  Create${PASCAL_CASE_NAME}Input as BackendCreate${PASCAL_CASE_NAME}Input,
-  ${PASCAL_CASE_NAME}Id,
-} from '@backend/entities/${ENTITY_NAME}';
 
-// Re-export backend types for convenience
-export type { ${PASCAL_CASE_NAME}Id };
-export type { Create${PASCAL_CASE_NAME}Input } from '@backend/entities/${ENTITY_NAME}';
+// TODO: Define ${PASCAL_CASE_NAME} types based on your backend schema
+// This is a template - replace with fields from your backend entity schema
 
-// Frontend ${PASCAL_CASE_NAME} type with ISO string dates (transformed from backend Date objects)
-export type ${PASCAL_CASE_NAME} = Omit<
-  Backend${PASCAL_CASE_NAME},
-  'createdAt' | 'updatedAt' | 'deletedAt'
-> & {
+// Frontend ${PASCAL_CASE_NAME} type with string dates for JSON serialization
+export interface ${PASCAL_CASE_NAME} {
+  id: string;
+  // TODO: Add your actual entity fields here based on backend schema
+  // Example: title: string;
+  // Example: description: string | null;
+  // Example: status: 'active' | 'inactive';
   createdAt: string;
   updatedAt: string;
   deletedAt: string | null;
-};
+}
 
-// TODO: Update frontend schema based on your actual entity fields
-// This is a template - replace with fields from your backend entity schema
-const _Frontend${PASCAL_CASE_NAME}Schema = z.object({
-  id: z.string().uuid().brand<'${PASCAL_CASE_NAME}Id'>(),
+// Input type for creating ${ENTITY_NAME}s
+export interface Create${PASCAL_CASE_NAME}Input {
+  // TODO: Add your actual required input fields
+  // Example: title: string;
+  // Example: description?: string;
+  // Example: priority?: 'high' | 'medium' | 'low';
+}
+
+// TODO: Update frontend validation schema based on your actual entity fields
+const ${PASCAL_CASE_NAME}Schema = z.object({
+  id: z.string().uuid(),
   // TODO: Add your actual entity fields here based on backend schema
   // Example: title: z.string().min(1),
   // Example: description: z.string().nullable(),
@@ -115,9 +117,8 @@ const _Frontend${PASCAL_CASE_NAME}Schema = z.object({
   deletedAt: z.string().datetime().nullable(),
 });
 
-// TODO: Update input schema based on your actual Create${PASCAL_CASE_NAME}Input from backend
-// This schema should match your backend entity's input requirements
-const _Create${PASCAL_CASE_NAME}InputSchema = z.object({
+// TODO: Update input schema based on your backend requirements
+const Create${PASCAL_CASE_NAME}InputSchema = z.object({
   // TODO: Replace with your actual required input fields
   // Example: title: z.string().trim().min(1, 'Title is required'),
   // Example: description: z.string().trim().optional(),
@@ -126,45 +127,35 @@ const _Create${PASCAL_CASE_NAME}InputSchema = z.object({
 
 // Validation helpers
 export const validate${PASCAL_CASE_NAME} = (data: unknown): ${PASCAL_CASE_NAME} | null => {
-  const result = _Frontend${PASCAL_CASE_NAME}Schema.safeParse(data);
+  const result = ${PASCAL_CASE_NAME}Schema.safeParse(data);
   return result.success ? result.data : null;
 };
 
 export const validateCreate${PASCAL_CASE_NAME}Input = (
   data: unknown
-): BackendCreate${PASCAL_CASE_NAME}Input | null => {
-  const result = _Create${PASCAL_CASE_NAME}InputSchema.safeParse(data);
+): Create${PASCAL_CASE_NAME}Input | null => {
+  const result = Create${PASCAL_CASE_NAME}InputSchema.safeParse(data);
   return result.success ? result.data : null;
 };
 
 // Form validation with error details
 export const validateCreate${PASCAL_CASE_NAME}InputWithErrors = (data: unknown) => {
-  const result = _Create${PASCAL_CASE_NAME}InputSchema.safeParse(data);
+  const result = Create${PASCAL_CASE_NAME}InputSchema.safeParse(data);
   if (result.success) {
     return { success: true, data: result.data, errors: null };
   }
 
-  const errors = result.error.errors.reduce(
-    (acc, error) => {
-      const field = error.path[0] as keyof BackendCreate${PASCAL_CASE_NAME}Input;
-      acc[field] = error.message;
+  const errors = result.error.issues.reduce(
+    (acc, issue) => {
+      const field = issue.path[0] as keyof Create${PASCAL_CASE_NAME}Input;
+      acc[field] = issue.message;
       return acc;
     },
-    {} as Record<keyof BackendCreate${PASCAL_CASE_NAME}Input, string>
+    {} as Record<keyof Create${PASCAL_CASE_NAME}Input, string>
   );
 
   return { success: false, data: null, errors };
 };
-
-// Utility to transform backend ${PASCAL_CASE_NAME} (with Date objects) to frontend ${PASCAL_CASE_NAME} (with ISO strings)
-export const transformBackend${PASCAL_CASE_NAME}ToFrontend = (
-  backend${PASCAL_CASE_NAME}: Backend${PASCAL_CASE_NAME}
-): ${PASCAL_CASE_NAME} => ({
-  ...backend${PASCAL_CASE_NAME},
-  createdAt: backend${PASCAL_CASE_NAME}.createdAt.toISOString(),
-  updatedAt: backend${PASCAL_CASE_NAME}.updatedAt.toISOString(),
-  deletedAt: backend${PASCAL_CASE_NAME}.deletedAt?.toISOString() || null,
-});
 
 // Response types for API
 export interface ${PASCAL_CASE_NAME}sResponse {
@@ -953,10 +944,23 @@ else
     echo "  - ✅ Comprehensive test coverage"
 fi
 echo ""
-echo "Next steps:"
-echo "1. Create a widget that uses these components:"
+echo "Next steps for TDD development:"
+echo "1. 🔴 RED: Start with failing tests"
+echo "   - Update shared types in frontend/src/shared/types/${ENTITY_NAME}.ts based on backend entity schema"
+echo "   - Update TODO comments in form/list components with actual field implementation"
+echo "   - Update validation schemas to match backend requirements"
+echo "   - Run: yarn workspace frontend test src/features/${FEATURE_NAME}/ (should fail)"
+echo "2. 🟢 GREEN: Make tests pass with minimal implementation"
+echo "   - Implement form fields based on entity schema"
+echo "   - Connect components to working API endpoints"
+echo "   - Update validation logic and error handling"
+echo "   - Keep running tests until they pass"
+echo "3. 🔵 BLUE: Refactor while keeping tests green"
+echo "4. Use MCP tools for comprehensive test coverage:"
+echo "   - Analyze backend API responses for frontend type safety"
+echo "   - Create decision tables for form validation scenarios"
+echo "   - Generate edge case tests: mcp__testing-mcp__generate_tests"
+echo "   - Test API hooks with various response scenarios"
+echo "5. Create a widget that uses these components:"
 echo "   ./tools/frontend/create-widget.sh ${ENTITY_NAME}-management"
-echo "2. Add the widget to a page"
-echo "3. Ensure backend entity and routes are properly set up"
-echo "4. Run tests: yarn workspace frontend test"
-echo "5. Test the full flow: yarn dev"
+echo "6. Ensure backend entity and routes are properly set up"

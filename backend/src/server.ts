@@ -2,7 +2,7 @@ import { serve } from '@hono/node-server';
 import { Hono } from 'hono';
 import { initializeDb } from './shared/adapters/db/pglite';
 import { migrate } from 'drizzle-orm/pglite/migrator';
-import createUserRoutes from './features/user/api/routes';
+import { createUserRoutes } from './features/user-management/api/routes';
 
 // Initialize database - use in-memory for testing, file-based for production
 const isTestMode =
@@ -23,7 +23,7 @@ await migrate(db, { migrationsFolder: './drizzle' }).catch((error) => {
 // Create app
 const app = new Hono();
 
-// Mount user routes
+// Mount routes
 const route = app.basePath('/api').route('/users', createUserRoutes(db));
 
 export type ApiSchema = typeof route;

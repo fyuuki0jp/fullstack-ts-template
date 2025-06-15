@@ -6,12 +6,11 @@ import type {
   CreateUserInput as BackendCreateUserInput,
   UpdateUserInput as BackendUpdateUserInput,
   UserId,
-  Email,
   UserName,
 } from '@backend/entities/user/schema';
 
 // Re-export backend branded types
-export type { UserId, Email, UserName };
+export type { UserId, UserName };
 
 // Frontend User type with ISO string dates (converted from backend Date objects)
 export type User = Omit<
