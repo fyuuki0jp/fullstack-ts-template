@@ -34,11 +34,11 @@ export const createDatabaseError = (error: Error): Error => {
       message.includes('insert') &&
       message.includes('email'))
   ) {
-    return new ConflictError('このメールアドレスは既に存在します');
+    return new ConflictError('Email already exists');
   }
 
   // Other database errors
-  return new DatabaseError('データベースエラーが発生しました');
+  return new DatabaseError('Database error occurred');
 };
 
 // Domain layer should not know about HTTP status codes

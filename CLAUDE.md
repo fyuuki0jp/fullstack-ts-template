@@ -101,7 +101,6 @@ yarn build              # Production build works
 - **No throw statements** - always use Result pattern
 - **No type duplication** - Pick/Partial from entities
 - **Always TDD** - tests first, then minimal implementation
-- **Use path aliases** - `@/entities/user` not `../../../entities/user`
 - **TodoWrite for planning** - break down complex tasks
 - **MCP tools for testing** - comprehensive coverage analysis
 

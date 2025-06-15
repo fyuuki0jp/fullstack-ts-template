@@ -24,10 +24,10 @@ export const createUser = depend(
         const firstError = apiValidation.error.issues[0];
         const errorMessage =
           firstError.path[0] === 'email'
-            ? 'メールアドレスが無効です'
+            ? 'Invalid email address'
             : firstError.path[0] === 'name'
-              ? '名前は必須です'
-              : `入力データが無効です: ${firstError.message}`;
+              ? 'Name is required'
+              : `Invalid input data: ${firstError.message}`;
         return err(new ValidationError(errorMessage));
       }
 

@@ -50,7 +50,7 @@ describe('createUser', () => {
 
     expect(isErr(result)).toBe(true);
     if (isErr(result)) {
-      expect(result.error.message).toContain('無効');
+      expect(result.error.message).toContain('Invalid email address');
     }
   });
 
@@ -87,9 +87,7 @@ describe('createUser', () => {
     const duplicateResult = await createUserFn(input);
     expect(isErr(duplicateResult)).toBe(true);
     if (isErr(duplicateResult)) {
-      expect(duplicateResult.error.message).toContain(
-        'このメールアドレスは既に存在'
-      );
+      expect(duplicateResult.error.message).toContain('Email already exists');
     }
   });
 });

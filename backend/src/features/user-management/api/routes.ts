@@ -51,7 +51,7 @@ export function createUserRoutes(db: DrizzleDb) {
       }
 
       if (result.value === null) {
-        return c.json({ error: 'userが見つかりません' }, 404);
+        return c.json({ error: 'User not found' }, 404);
       }
 
       return c.json({ user: result.value });

@@ -29,7 +29,7 @@ export type UserName = z.infer<typeof UserNameSchema>;
 export const UserNameSchema = z
   .string()
   .trim()
-  .min(1, 'Name is required')
+  .min(2, 'Name must be at least 2 characters long')
   .max(100, 'Name must be 100 characters or less')
   .brand<'UserName'>();
 

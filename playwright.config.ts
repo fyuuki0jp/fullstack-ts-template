@@ -68,7 +68,7 @@ export default defineConfig({
     {
       command: 'yarn dev:test',
       port: 5173,
-      reuseExistingServer: false,
+      reuseExistingServer: !process.env.CI,
       env: {
         NODE_ENV: 'test',
         DATABASE_MODE: 'memory',
